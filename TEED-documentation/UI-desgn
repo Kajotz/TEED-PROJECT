@@ -1,0 +1,131 @@
+TEED Hub Project – Initial Design & UX Documentation
+1. Core Principles
+
+Mobile-First:
+
+Every page is designed starting with small screens (phones).
+
+Responsive breakpoints scale up to tablets, desktops, and wide screens.
+
+Tailwind’s responsive utilities (sm:, md:, lg:) will be used from day one.
+
+Modern & Fancy UX:
+
+Minimalist yet visually striking (like Stripe, Notion, or Linear).
+
+Smooth animations for transitions, buttons, hover effects.
+
+Clear hierarchy of content with whitespace, typography, and color accents.
+
+Multi-Portal for Customers:
+
+Each user will have a personal dashboard.
+
+Includes sections for:
+
+Business analytics (sales, growth charts)
+
+Social tools (post generators, growth trackers)
+
+Account & subscription management
+
+Modular design: each “widget” or section is a React component for reusability.
+
+Simple, Intuitive Navigation:
+
+Top navigation bar or sidebar depending on screen size.
+
+Sticky navigation for dashboards.
+
+Icons + text for clarity.
+
+Design System & Branding:
+
+Brand color: #1F75FE (primary)
+
+Secondary palette: subtle grays, whites, and accent colors.
+
+Font system: modern sans-serif (Inter, System UI)
+
+Use Tailwind + shadcn/ui for consistent components.
+
+2. Suggested Page & Component Structure
+
+Folders
+
+/src
+ ├─ /assets       # images, icons, fonts
+ ├─ /components   # reusable UI pieces (cards, buttons, charts)
+ ├─ /pages        # each page (Home, Dashboard, Login, Settings, etc)
+ ├─ /layouts      # Layout components (Header, Footer, Sidebar)
+ ├─ /api          # Axios instances
+ ├─ /i18n         # translations
+
+
+Page Examples
+
+Home → Landing page / teaser
+
+Dashboard → User portal (charts, analytics, shortcuts)
+
+SocialTools → Growth tools (Instagram, Facebook, Google listings)
+
+Payments → Subscription, wallet, transactions
+
+Account → Profile, security, settings
+
+Component Examples
+
+Card, StatWidget, Chart, Sidebar, Header, Button, Modal, Table
+
+3. Design / Style Guidelines
+
+Spacing & Layout
+
+Use Tailwind spacing utilities consistently: p-4, m-4, space-x-2, space-y-4.
+
+Grids for dashboard cards: grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6.
+
+Typography
+
+Headings: text-2xl → text-5xl depending on hierarchy
+
+Body: text-base → text-lg
+
+Font-weight: semi-bold for headings, normal for body
+
+Colors & Dark Mode
+
+Primary: #1F75FE
+
+Background: light mode → #FFFFFF, dark mode → #111827
+
+Cards: light gray in light mode, darker gray in dark mode
+
+Text: high contrast for readability
+
+Animations
+
+Button hover: subtle shadow or color transition
+
+Loading states: skeleton components
+
+Charts: animated transitions
+
+Responsiveness
+
+Mobile: single column layouts, collapsible sidebar
+
+Tablet: 2–3 column cards
+
+Desktop: 4+ column grid for dashboard
+
+4. Next Steps Before Coding Auth
+
+Decide Dashboard Layout Wireframe (main page grid, header, sidebar)
+
+Set up Routing for Pages (React Router)
+
+Ensure Tailwind, shadcn/ui, i18n, dark mode, and PWA are fully integrated
+
+Define API endpoints structure for auth & analytics (Django side)

@@ -1,0 +1,140 @@
+/* ProfilePage Styles */
+
+.user-profile-page {
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.profile-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Error Banner */
+.error-banner {
+  background: #fadbd8;
+  color: #c0392b;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-banner p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.error-banner .btn-small {
+  background: #c0392b;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.error-banner .btn-small:hover {
+  background: #a93226;
+}
+
+/* Empty Section */
+.empty-section {
+  background: white;
+  padding: 60px 40px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 40px;
+}
+
+.empty-section h2 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.empty-section p {
+  margin: 0 0 24px 0;
+  color: #7f8c8d;
+  font-size: 15px;
+}
+
+.empty-section.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Button Styles */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2980b9;
+}
+
+.btn-secondary {
+  background: #ecf0f1;
+  color: #2c3e50;
+}
+
+.btn-secondary:hover {
+  background: #bdc3c7;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profile-content {
+    padding: 24px 16px;
+  }
+
+  .empty-section {
+    padding: 40px 20px;
+  }
+
+  .empty-section h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-content {
+    padding: 16px 12px;
+  }
+
+  .error-banner {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .empty-section {
+    padding: 24px 16px;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

@@ -1,0 +1,136 @@
+/* BusinessCard Component Styles */
+
+.business-card {
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.business-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Header with Logo */
+.business-card__header {
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.business-card__logo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.business-card__logo-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: bold;
+}
+
+/* Body */
+.business-card__body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.business-card__name {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.business-card__type-badge {
+  display: inline-block;
+  background: #ecf0f1;
+  color: #2c3e50;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  width: fit-content;
+}
+
+.business-card__role-badge {
+  display: inline-block;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  width: fit-content;
+}
+
+.business-card__description {
+  margin: 0 0 8px 0;
+  color: #7f8c8d;
+  font-size: 13px;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.business-card__date {
+  margin: 0;
+  color: #95a5a6;
+  font-size: 12px;
+}
+
+/* Footer */
+.business-card__footer {
+  padding: 8px 16px;
+  background: #f9f9f9;
+  border-top: 1px solid #ecf0f1;
+}
+
+.business-card__status {
+  font-size: 12px;
+  font-weight: 500;
+  color: #7f8c8d;
+}
+
+.business-card__status.active {
+  color: #27ae60;
+}
+
+.business-card__status.inactive {
+  color: #e74c3c;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .business-card {
+    border-radius: 6px;
+  }
+
+  .business-card__body {
+    padding: 12px;
+  }
+
+  .business-card__name {
+    font-size: 16px;
+  }
+}

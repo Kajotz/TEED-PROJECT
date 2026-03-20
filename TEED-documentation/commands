@@ -1,0 +1,39 @@
+cd .\teedhub_frontend; npx tailwindcss -c tailwind.config.js -i src/assets/input.css -o src/assets/main.css --watch
+Set-Content -Path .\.env -Value "VITE_API_URL=http://127.0.0.1:8000/api" (env creation)
+4403530021967840, 06/28
+
+
+
+import HeroVisuals from './heroVisuals';cd 'c:\Users\jacktech\Desktop\TEED PROJECT' ; & ".\venv\Scripts\python.exe" test_auth_flow.py
+
+
+continue with creating a frontend for busness logic as per our intergration guide and data schema remember to create documentation at TEED-documenation if neccessary , also make sure the files a well organized and short for better scaralabilty and maitainance for exmaple each important view or models should have its specific file 
+
+
+my brand colors is blue navy 1F75FE and  orange f2a705 those two should used throughout the page or limit use of normal css use tailwind or shadcn which are already implemented
+
+my brand colors is blue navy 1F75FE and  orange f2a705 those two should used throughout the page or limit use of normal css use tailwind or shadcn which are already implemented. second as per AD document after sign up user lands at profilepage ,here is what he should be allowed to do and what infos should be there , user id, email , then change password, update user profile like username (which can be used for auth later),user image for upload,change email , password link(to recover password if neccessary) other contacts ,country ,(thats like personal information of user ). then after busness profile (personal infos) we have link which is create busness or if busness created user click the busness name and it sends user to busness profile . SO i think we might create userprofile/personal info models which enables us have personal info in DB .then we can create a busness profile or enagage in busness logic .
+
+ "c:\Users\jacktech\Desktop\TEED PROJECT\venv\Scripts\Activate.ps1"
+
+ Get-ChildItem -Recurse -Filter *.py | Select-String "membership.role"
+
+ python manage.py shell
+
+ from django.contrib.auth import get_user_model
+User = get_user_model()
+
+# This fetches all users where is_superuser is True
+superusers = User.objects.filter(is_superuser=True)
+
+# Print their usernames
+for user in superusers:
+    print(f"Username: {user.username} | Email: {user.email}")
+
+    Get-ChildItem core\views -Recurse -Filter *.py | Select-String "memberships__|membership\.|has_any_role\(|primary_role\(|owner="
+
+    & "C:\Users\admin\Desktop\TEED PROJECT\venv\Scripts\Activate.ps1"
+
+    $env:Path += ";C:\Program Files\nodejs\"
+node -v
+npm -v

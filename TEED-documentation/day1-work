@@ -1,0 +1,441 @@
+Good. This is the right move.
+If you skip this and jump to code, TEED will rot from the inside.
+I’ll be blunt and I’ll stress-test everything.
+
+Below is pure documentation: business logic flow, system logic, API contracts, signals, serializers. No code.
+Think of this as the constitution of TEED.
+
+TEED – Business Logic & System Flow Documentation (v1)
+1. CORE TRUTH (Read this or TEED fails)
+
+TEED is NOT:
+
+a website
+
+a dashboard
+
+an AI chatbot
+
+a PWA
+
+TEED IS:
+
+A multi-tenant business operating system for digital entrepreneurs.
+
+If your logic doesn’t treat TEED as a business OS, you’re building trash.
+
+2. CORE ENTITIES (Non-Negotiable)
+2.1 User
+
+A human being.
+
+Key rules
+
+A User can own multiple Businesses
+
+A User can belong to multiple Businesses
+
+A User has one identity, many contexts
+
+2.2 Business (Tenant)
+
+This is the real customer, not the user.
+
+Key rules
+
+Everything in TEED belongs to a Business
+
+Data NEVER crosses businesses
+
+Business switching is mandatory (no shortcuts)
+
+2.3 Membership
+
+Connects User ↔ Business
+
+Roles
+
+Owner (full control)
+
+Admin
+
+Staff
+
+Viewer
+
+Key rules
+
+Permissions come from Membership, not User
+
+One User = different role per Business
+
+3. HIGH-LEVEL SYSTEM FLOW
+3.1 Authentication Flow
+
+User logs in
+
+System fetches:
+
+All Businesses user belongs to
+
+If:
+
+0 businesses → onboarding
+
+1 business → auto-select
+
+1 → force business switch screen
+
+active_business stored in session / token
+
+⚠️ If active business is missing → API MUST FAIL
+
+3.2 Business Context Enforcement (CRITICAL)
+
+Every request must answer:
+
+“Which business is this for?”
+
+If not → 403 Forbidden
+
+This is where most startups screw up.
+
+4. TEED MODULE ARCHITECTURE
+
+Each module follows the same pattern:
+
+Business
+ └── Module
+     ├── Data
+     ├── Analytics
+     ├── AI Layer
+     └── Actions
+
+
+No exceptions.
+
+5. CORE MODULES & LOGIC FLOW
+5.1 Business Onboarding Module
+Flow
+
+User creates Business
+
+System:
+
+Creates Business record
+
+Assigns user as Owner
+
+Initializes default modules
+
+Business becomes selectable
+
+Business Rules
+
+Business name must be unique per owner
+
+Currency, country, timezone locked after creation (v1)
+
+5.2 Social Presence Module
+Purpose
+
+Help businesses grow visibility (Instagram, Facebook, Google).
+
+Logic Flow
+
+Business connects social account
+
+System stores:
+
+platform
+
+account_id
+
+access scope
+
+Data pulled on schedule
+
+Metrics stored per business
+
+Metrics
+
+followers
+
+reach
+
+engagement
+
+post frequency
+
+AI Usage
+
+Caption suggestions
+
+Bio optimization
+
+Posting time analysis
+
+⚠️ AI suggests, never auto-posts (trust issue).
+
+5.3 Ads & Growth Module (Meta Focus)
+Flow
+
+Business links ad account
+
+System:
+
+pulls ad status
+
+detects errors / limitations
+
+AI explains issues in human language
+
+Core Logic
+
+Raw API error → AI explanation → action checklist
+
+No magic promises.
+If you promise “fix bans automatically”, that’s bullshit.
+
+5.4 Smart Payments / Escrow Module
+Purpose
+
+Trust layer between buyer & seller.
+
+Flow
+
+Order created
+
+Payment collected
+
+Funds held (pending)
+
+Trigger events:
+
+delivery confirmed
+
+dispute opened
+
+Funds released or reversed
+
+Business Rules
+
+TEED never owns funds
+
+TEED only orchestrates
+
+Full audit trail required
+
+5.5 Analytics Engine (Central Nervous System)
+Data Sources
+
+Sales
+
+Social
+
+Ads
+
+Customer behavior
+
+Logic
+
+Raw events → normalized metrics
+
+Time windows:
+
+daily
+
+weekly
+
+monthly
+
+yearly
+
+Output
+
+KPIs
+
+Trends
+
+Comparisons
+
+⚠️ Analytics must be read-only to users.
+
+5.6 AI Partner Layer (Non-Optional)
+
+AI is not a chatbot.
+
+AI Inputs
+
+Business context
+
+Module data
+
+User intent
+
+AI Outputs
+
+Explanations
+
+Suggestions
+
+Risk warnings
+
+Roadmaps
+
+Hard Rule
+
+AI NEVER:
+
+executes payments
+
+changes data
+
+bypasses permissions
+
+AI is an advisor, not an admin.
+
+6. API LOGIC (Conceptual, No Code)
+API Design Rules
+
+Every endpoint requires:
+
+authenticated user
+
+active business
+
+Business ID inferred, not passed manually
+
+Permission checked via Membership
+
+Example Endpoint Categories
+Auth
+
+login
+
+logout
+
+refresh
+
+Business
+
+create
+
+switch
+
+settings
+
+members
+
+Modules
+
+/social/*
+
+/ads/*
+
+/payments/*
+
+/analytics/*
+
+7. SERIALIZER RESPONSIBILITIES (Conceptual)
+
+Serializers are gatekeepers, not data dumpers.
+
+Responsibilities
+
+Validate ownership
+
+Enforce business scope
+
+Shape API output
+
+Hide sensitive fields
+
+Rule
+
+If a serializer doesn’t know the business, it’s invalid.
+
+8. SIGNALS & EVENTS (SYSTEM BRAIN)
+
+Signals are domain events, not hacks.
+
+Core Events
+
+user_joined_business
+
+business_created
+
+payment_completed
+
+dispute_opened
+
+analytics_snapshot_created
+
+Signal Rules
+
+No business logic in views
+
+Signals trigger:
+
+notifications
+
+analytics updates
+
+AI insights refresh
+
+9. PERMISSION MODEL (BRUTALLY SIMPLE)
+Role	Access Level
+Owner	Everything
+Admin	Manage modules & staff
+Staff	Operate assigned modules
+Viewer	Read-only
+
+No custom permissions in v1.
+Custom perms early = design suicide.
+
+10. FAILURE POINTS (READ CAREFULLY)
+
+If you do these, TEED will fail:
+
+❌ Business ID in URLs everywhere
+❌ AI making promises it can’t keep
+❌ No strict tenant isolation
+❌ Overengineering permissions
+❌ Building UI before locking logic
+
+11. REALITY CHECK (No Sugarcoating)
+
+This scope is huge
+
+MVP must ship with:
+
+Business
+
+Membership
+
+One strong module (Analytics OR Ads)
+
+Everything else is staged
+
+Trying to ship all modules at once = guaranteed collapse
+
+12. NEXT STEP (Your Call)
+
+Next we can:
+
+Break this into MVP vs Phase 2
+
+Design database schema
+
+Define exact API contracts
+
+Stress-test the AI layer assumptions
+
+Reduce scope without killing vision
+
+Tell me where you want to go next.
+If your next idea is weak, I’ll call it out.
+
+here at this page http://localhost:5173/profile
+why i do not see the changes i wanted 
+my brand colors is blue navy 1F75FE and  orange f2a705 those two should used throughout the page or limit use of normal css use tailwind or shadcn which are already implemented. second as per AD document after sign up user lands at profilepage ,here is what he should be allowed to do and what infos should be there , user id, email , then change password, update user profile like username (which can be used for auth later),user image for upload,change email , password link(to recover password if neccessary) other contacts ,country ,(thats like personal information of user ). then after busness profile (personal infos) we have link which is create busness or if busness created user click the busness name and it sends user to busness profile . SO i think we might create userprofile/personal info models which enables us have personal info in DB .then we can create a busness profile or enagage in busness logic .

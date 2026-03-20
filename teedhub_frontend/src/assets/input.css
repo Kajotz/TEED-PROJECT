@@ -1,0 +1,91 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === TeedHub Gradient Animation === */
+@keyframes gradient-slow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-slow {
+  background-size: 200% 200%;
+  animation: gradient-slow 10s ease infinite;
+}
+
+/* === Lava Blob Animations === */
+@keyframes lava-blob-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 30px) scale(0.9);
+  }
+}
+
+@keyframes lava-blob-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-40px, 40px) scale(1.15);
+  }
+  66% {
+    transform: translate(30px, -30px) scale(0.85);
+  }
+}
+
+@keyframes lava-blob-3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(50px, 30px) scale(1.2) rotate(120deg);
+  }
+  66% {
+    transform: translate(-30px, -40px) scale(0.9) rotate(240deg);
+  }
+}
+
+@keyframes lava-blob-4 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(40px, -30px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 40px) scale(0.95);
+  }
+  75% {
+    transform: translate(30px, 20px) scale(1.05);
+  }
+}
+
+.animate-lava-blob-1 {
+  animation: lava-blob-1 20s ease-in-out infinite;
+}
+
+.animate-lava-blob-2 {
+  animation: lava-blob-2 25s ease-in-out infinite;
+}
+
+.animate-lava-blob-3 {
+  animation: lava-blob-3 30s ease-in-out infinite;
+}
+
+.animate-lava-blob-4 {
+  animation: lava-blob-4 22s ease-in-out infinite;
+}

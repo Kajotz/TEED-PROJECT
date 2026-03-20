@@ -1,0 +1,216 @@
+Quick summary (what we’ll do)
+
+Create .env for frontend with VITE_ prefixed vars.
+
+Import/use those vars in your axios instance & debug them.
+
+Create .env for backend (Django) with SECRET_KEY, DEBUG, DB URL, CORS, etc.
+
+Wire Django to read .env (recommended: django-environ).
+
+Add .env to .gitignore, add .env.example (safe placeholders) to repo.
+
+Restart dev servers (Vite + Django). Test.
+
+A — Frontend (Vite + React)
+1) Create file
+
+At teedhub_frontend/ create .env (exact filename: .env or .env.local).
+
+Contents (copy/paste):
+
+# teedhub_frontend/.env
+VITE_API_URL=http://127.0.0.1:8000/api
+VITE_NODE_ENV=development
+
+
+Important: Vite only exposes env vars that start with VITE_. Never put secrets in client .env because they end up in the browser.
+
+2) Use it in Axios
+
+Update your src/api/axios.js (or create it) to read the var:
+
+// src/api/axios.js
+import axios from "axios";
+
+const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+
+const api = axios.create({
+  baseURL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export default api;
+
+3) Quick debug
+
+In src/main.jsx (or any component) temporarily add:
+
+console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
+
+
+Restart Vite dev server after editing .env (see step 6).
+
+B — Backend (Django)
+
+I recommend django-environ (simple and robust).
+
+1) Install package
+
+Inside your Django virtualenv:
+
+pip install django-environ
+
+2) Create backend .env
+
+At your Django project root (same folder as manage.py) create .env.
+
+Contents (example) — adjust values:
+
+# teedhub_backend/.env
+SECRET_KEY=replace_this_with_a_strong_secret_key
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+DATABASE_URL=sqlite:///db.sqlite3
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+
+Notes:
+
+DATABASE_URL can be sqlite:///db.sqlite3 for local dev or a full postgres URL for production.
+
+CORS_ALLOWED_ORIGINS is a comma separated list; we'll parse it.
+
+3) Wire settings.py to read .env
+
+Edit top of your Django settings.py:
+
+# settings.py (top)
+import os
+import environ
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+
+# read .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
+
+# ALLOWED_HOSTS: read as CSV
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+
+# Database
+DATABASES = {
+    'default': env.db('DATABASE_URL', default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}")
+}
+
+# CORS (if using django-cors-headers)
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173'])
+
+
+If you use django-cors-headers, ensure it’s installed and in INSTALLED_APPS + middleware.
+
+4) Security note
+
+Never commit this .env. Treat SECRET_KEY as secret. For production, set env variables through your host (e.g., server env, Docker secrets, or cloud config).
+
+C — .gitignore and .env.example
+1) Add .env to .gitignore
+
+At both teedhub_frontend/ and Django root (if separate repos), make sure .env is ignored:
+
+# .gitignore (frontend and backend)
+.env
+.env.local
+
+2) Add .env.example to repo (safe placeholders)
+
+Create teedhub_frontend/.env.example:
+
+VITE_API_URL=http://127.0.0.1:8000/api
+
+
+Create teedhub_backend/.env.example:
+
+SECRET_KEY=REPLACE_ME
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+DATABASE_URL=sqlite:///db.sqlite3
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+
+Commit these example files so teammates know what to fill.
+
+D — Windows tips (since you’re on Windows)
+
+To create .env with PowerShell:
+
+Set-Content -Path .\.env -Value "VITE_API_URL=http://127.0.0.1:8000/api"
+
+
+To view an env file:
+
+Get-Content .\.env
+
+E — Restart dev servers (very important)
+
+After creating/updating .env files, restart both dev servers:
+
+# Django (in your venv)
+python manage.py runserver
+
+# Frontend (in frontend folder)
+npm run dev
+
+
+Vite reads import.meta.env at startup — changes to .env require restart.
+
+F — Test end-to-end
+
+Start Django: python manage.py runserver (default: http://127.0.0.1:8000/).
+
+Start Vite: npm run dev (default: http://localhost:5173/).
+
+Open browser console — check console.log("VITE_API_URL:", import.meta.env.VITE_API_URL) shows your API URL.
+
+Visit page that calls API (Home.jsx). Confirm the call goes to the VITE_API_URL endpoint and returns data. If CORS blocks, add origin to Django CORS_ALLOWED_ORIGINS in .env.
+
+G — Extra: secure production notes (short)
+
+For production, do not use .env files on client; use server-side env or secrets manager.
+
+For backend, set environment variables via hosting platform (Heroku, Railway, Docker, systemd) and do not commit .env.
+
+H — Quick checklist you can follow NOW
+
+Create teedhub_frontend/.env with VITE_API_URL=....
+
+Update src/api/axios.js to use import.meta.env.VITE_API_URL.
+
+Create teedhub_backend/.env with SECRET_KEY, DEBUG, DATABASE_URL, CORS_ALLOWED_ORIGINS.
+
+pip install django-environ and update settings.py as shown.
+
+Add .env to .gitignore and create .env.example files.
+
+Restart Django and Vite servers.
+
+Test API calls and console.log(import.meta.env.VITE_API_URL).
+
+If you want I can:
+
+Paste a ready-to-drop settings.py snippet showing all lines to add,
+
+Or create the axios.js file for you with the fallback,
+
+Or produce the exact .gitignore lines to add.
+
+Tell me which of those (or all) and I’ll paste the exact files ready for copy/paste.

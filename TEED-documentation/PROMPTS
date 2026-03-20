@@ -1,0 +1,116 @@
+Nice — strong move. Below are 5 copy-paste prompts you can drop into Copilot Chat (or any coding AI assistant) to scaffold the TEED Hub monorepo. Each prompt is purposeful and self-contained. After the prompts I’ll start you with manual step-by-step for Prompt 1 (backend) so you can get something running immediately.
+
+Copilot Prompt 1 — Django REST backend skeleton (minimal, ready for JWT)
+
+What it does: creates a teedhub_backend Django project, installs/sets up DRF, CORS, SimpleJWT, and an /api/hello/ endpoint + JWT token endpoints.
+
+Prompt (paste to Copilot):
+Create a Django REST backend skeleton called teedhub_backend. Do the following automatically:
+
+Create and activate a virtualenv (venv) and a requirements.txt with at least: django, djangorestframework, django-cors-headers, djangorestframework-simplejwt.
+
+django-admin startproject teedhub_backend and inside it python manage.py startapp core.
+
+Edit teedhub_backend/settings.py to:
+
+add 'rest_framework', 'corsheaders', and 'core' to INSTALLED_APPS.
+
+insert 'corsheaders.middleware.CorsMiddleware' at top of MIDDLEWARE.
+
+set CORS_ALLOWED_ORIGINS = ["http://localhost:5173"].
+
+add REST_FRAMEWORK = { "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",) }
+
+set USE_I18N = True and add LANGUAGES = [('en','English'), ('sw','Kiswahili')] and LOCALE_PATHS = [BASE_DIR / 'locale'].
+
+Create core/views.py with a simple DRF view @api_view(['GET']) that returns {"message":"Welcome to TEED Hub API"}.
+
+Edit teedhub_backend/urls.py to include:
+
+path api/hello/ -> the hello view
+
+SimpleJWT endpoints: api/token/ and api/token/refresh/
+
+Output a README.md with exact commands to run: python -m venv venv, source venv/bin/activate (Windows note), pip install -r requirements.txt, python manage.py migrate, python manage.py runserver.
+
+Add a short core/tests.py test that hits /api/hello/ and asserts the message.
+
+Generate the files and full code blocks for each file. Keep the code minimal and clear.
+
+Copilot Prompt 2 — React (Vite) frontend + Tailwind + axios + basic pages
+
+What it does: scaffolds teedhub_frontend with Vite + React, installs Tailwind, axios, react-router, and creates Home/Login/Dashboard pages. Home calls the backend /api/hello/.
+
+Prompt (paste to Copilot):
+Create a Vite React frontend called teedhub_frontend. Do the following:
+
+Show the exact terminal commands: npm create vite@latest teedhub_frontend -- --template react then cd teedhub_frontend and npm install.
+
+Add and install packages: npm i axios react-router-dom react-i18next i18next and npm i -D tailwindcss postcss autoprefixer. Run npx tailwindcss init -p.
+
+Create tailwind.config.cjs (or .js) with content: ['./index.html','./src/**/*.{js,jsx,ts,tsx}'] and darkMode: 'class'.
+
+Create src/main.jsx that mounts <App /> inside <BrowserRouter> and wraps providers (Theme + I18n placeholders).
+
+Create src/App.jsx with Routes: / (Home), /login (Login), /dashboard (Dashboard).
+
+Create src/pages/Home.jsx which uses axios to GET http://127.0.0.1:8000/api/hello/ on mount and displays the message.
+
+Add index.css with Tailwind base/components/utilities and a CSS variable :root { --brand: #c56926 }.
+
+Add scripts in package.json for dev, build, preview.
+
+Generate full file contents for all created files and explain how to run npm run dev.
+
+Copilot Prompt 3 — Basic component system + theme (dark/light) toggle
+
+What it does: build small component set (Navbar, Button, ThemeToggle) and a ThemeContext that persists theme to localStorage and toggles document.documentElement.classList 'dark'.
+
+Prompt (paste to Copilot):
+In the React project, create a lightweight component library using Tailwind (no external UI runtime). Do:
+
+Create src/components/Navbar.jsx, src/components/Button.jsx, src/components/ThemeToggle.jsx. Navbar should include site logo, links, a language selector dropdown (placeholder that calls i18n.changeLanguage) and ThemeToggle. Use Tailwind classes and the --brand color.
+
+Create src/context/ThemeContext.jsx that:
+
+exposes ThemeProvider, useTheme(), and persists theme in localStorage.
+
+toggles document.documentElement.classList.add('dark') when dark.
+
+Wrap the <App /> with ThemeProvider in main.jsx.
+
+Provide the full code for these files and short instructions to style the brand color using --brand.
+
+Keep components small and copy-pasteable (no external deps except react + tailwind).
+
+Copilot Prompt 4 — i18n (Swahili / English) setup for frontend + Django guidance
+
+What it does: wires react-i18next for frontend, creates src/i18n.js with en and sw resources and language switching; instructs Django i18n basics.
+
+Prompt (paste to Copilot):
+Add i18n support (English + Swahili):
+
+In the React app, create src/i18n.js configuring i18next + react-i18next with resources for en and sw (include minimal keys: welcome, login, dashboard). Initialize with fallbackLng: 'en'. Export and import this in main.jsx.
+
+Add a simple language switcher button in Navbar.jsx that calls i18n.changeLanguage('sw') or 'en'.
+
+For Django: show the exact small changes to settings.py: USE_I18N = True, LANGUAGE_CODE = 'en-us', LANGUAGES = [('en','English'),('sw','Kiswahili')], add 'django.middleware.locale.LocaleMiddleware' in MIDDLEWARE (placed after SessionMiddleware). Add instructions for django-admin makemessages -l sw and compilemessages to create translations when ready.
+
+Return the full src/i18n.js and example translation JSON content.
+
+Copilot Prompt 5 — JWT auth endpoints (Django) + React AuthContext + PWA basics
+
+What it does: create SimpleJWT token endpoints plus a minimal registration endpoint; create React AuthContext with login/logout using tokens; add basic Vite PWA plugin config or service worker registration.
+
+Prompt (paste to Copilot):
+Add minimal auth + PWA support:
+
+Backend: In Django, use rest_framework_simplejwt to expose /api/token/ and /api/token/refresh/. Create a core.views.UserCreateAPIView that allows signup (POST username, email, password) and returns created user data. Update urls.py. Add SIMPLE_JWT config if needed.
+
+Frontend: Create src/context/AuthContext.jsx with login({username,password}) that POSTs to http://127.0.0.1:8000/api/token/, stores access/refresh in localStorage, exposes logout() and currentUser. Provide a ProtectedRoute component that redirects to /login if no token.
+
+PWA: show how to add vite-plugin-pwa to vite.config.js using VitePWA({ registerType: 'autoUpdate', manifest: {name:'TEED Hub', short_name:'TEED', start_url:'/', display:'standalone', icons:[...]} }). Also create a minimal src/registerServiceWorker.js with navigator.serviceWorker.register() snippet and call it from main.jsx in production.
+
+Provide the full code for AuthContext.jsx and example Login.jsx form.
+
+Make auth minimal and secure enough for dev/testing; note where to improve for production.

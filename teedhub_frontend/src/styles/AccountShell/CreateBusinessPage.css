@@ -1,0 +1,17 @@
+.dark .create-business-title {
+  color: #f5f7fb;
+}
+
+.dark .create-business-subtitle {
+  color: #aeb8c9;
+}
+
+.dark .create-business-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f5f7fb;
+}
+
+.dark .create-business-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

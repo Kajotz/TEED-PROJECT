@@ -8,7 +8,7 @@
 /* --- Root layout - REMOVED max-width constraint --- */
 #root {
   width: 100%;
-  margin: 0.5em auto;
+  margin: 0;
   padding: 0;
 }
 

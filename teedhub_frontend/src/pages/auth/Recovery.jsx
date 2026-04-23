@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, Lock, User, ArrowRight, ArrowLeft, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
-import Toast from '@/components/Toast';
+import Toast from '@/components/ui/Toast';
 import { API_BASE_URL } from '@/utils/constants';
+
 
 const BACKEND_ROOT = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
 

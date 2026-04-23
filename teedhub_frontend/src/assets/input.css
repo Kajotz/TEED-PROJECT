@@ -1,91 +1,57 @@
-html,
-body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  overflow-x: hidden;
-}
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221 83% 56%;        /* #1F75FE */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 56%;
+    --radius: 0.5rem;
+  }
 
-/* === TeedHub Gradient Animation === */
-@keyframes gradient-slow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+  .dark {
+    --background: 0 0% 11.8%;       /* #1E1E1E */
+    --foreground: 0 0% 83.1%;       /* #D4D4D4 */
+    --card: 0 0% 14.9%;
+    --card-foreground: 0 0% 83.1%;
+    --popover: 0 0% 14.9%;
+    --popover-foreground: 0 0% 83.1%;
+    --primary: 221 83% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 83.1%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 56%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 83.1%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 22.7%;           /* #3A3A3A */
+    --input: 0 0% 22.7%;
+    --ring: 221 83% 56%;
+  }
 
-.animate-gradient-slow {
-  background-size: 200% 200%;
-  animation: gradient-slow 10s ease infinite;
-}
+  * {
+    border-color: hsl(var(--border));
+  }
 
-/* === Lava Blob Animations === */
-@keyframes lava-blob-1 {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 30px) scale(0.9);
-  }
-}
-
-@keyframes lava-blob-2 {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(-40px, 40px) scale(1.15);
-  }
-  66% {
-    transform: translate(30px, -30px) scale(0.85);
-  }
-}
-
-@keyframes lava-blob-3 {
-  0%, 100% {
-    transform: translate(0, 0) scale(1) rotate(0deg);
-  }
-  33% {
-    transform: translate(50px, 30px) scale(1.2) rotate(120deg);
-  }
-  66% {
-    transform: translate(-30px, -40px) scale(0.9) rotate(240deg);
-  }
-}
-
-@keyframes lava-blob-4 {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(40px, -30px) scale(1.1);
-  }
-  50% {
-    transform: translate(-20px, 40px) scale(0.95);
-  }
-  75% {
-    transform: translate(30px, 20px) scale(1.05);
-  }
-}
-
-.animate-lava-blob-1 {
-  animation: lava-blob-1 20s ease-in-out infinite;
-}
-
-.animate-lava-blob-2 {
-  animation: lava-blob-2 25s ease-in-out infinite;
-}
-
-.animate-lava-blob-3 {
-  animation: lava-blob-3 30s ease-in-out infinite;
-}
-
-.animate-lava-blob-4 {
-  animation: lava-blob-4 22s ease-in-out infinite;
 }

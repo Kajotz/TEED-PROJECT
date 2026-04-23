@@ -1,0 +1,63 @@
+🔹 1. Members Overview
+GET /api/businesses/:id/rbac-summary/
+Expect:
+total_members
+total_roles
+total_permissions
+recent_members (optional)
+🔹 2. Members List
+GET /api/businesses/:id/members/
+Expect:
+member_id (UUID)
+user info (email/username)
+roles (array)
+joined_at
+🔹 3. Roles
+GET /api/businesses/:id/roles/
+
+POST /api/businesses/:id/roles/
+
+{ "name": "Manager" }
+PATCH /api/businesses/:id/roles/:role_id/
+DELETE /api/businesses/:id/roles/:role_id/
+🔹 4. Role Permissions
+GET /api/businesses/:id/permissions/ → catalog
+GET /api/businesses/:id/roles/:role_id/permissions/
+
+POST /api/businesses/:id/roles/:role_id/permissions/
+
+{ "permission_id": 3 }
+DELETE /api/businesses/:id/roles/:role_id/permissions/:permission_id/
+🔹 5. Member Role Assignment
+
+POST /api/businesses/:id/members/:member_id/roles/
+
+{ "role_id": 2 }
+DELETE /api/businesses/:id/members/:member_id/roles/:role_id/
+🔹 6. Access Check (CRITICAL)
+GET /api/businesses/:id/access/
+Expect:
+roles: []
+permissions: []
+
+👉 This is what your frontend must trust.
+
+🔹 7. Permission Enforcement
+
+Test manually:
+
+user without roles.view → cannot open roles page
+user without roles.manage → cannot:
+create role
+assign permission
+delete role
+🔹 8. Edge Cases (don’t skip)
+Assign same role twice → should NOT duplicate
+Assign same permission twice → should NOT duplicate
+Delete role in use → should fail or handle cleanly
+Remove last owner → must be blocked
+🔹 9. UI Flow Checks
+Switch role → permissions reload instantly
+Assign permission → appears without refresh
+Remove → disappears instantly
+Sidebar navigation → all members routes work

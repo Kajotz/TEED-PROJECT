@@ -1,148 +1,349 @@
-// src/pages/Login.jsx
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Lock, Mail, Smartphone, Eye, EyeOff, CheckCircle } from "lucide-react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Eye, EyeOff, Smartphone } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+
+import AuthLayout from "@/components/layouts/AuthLayout";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/Input";
+import Form, { FormActions, FormMeta } from "@/components/ui/Forms";
+
 import { API_BASE_URL } from "@/utils/constants";
+import { setAuthTokens } from "@/utils/auth";
+import { useAuthState } from "@/context/AuthStateContext";
+import { useAppToast } from "@/components/ui/toast/AppToastProvider";
+import { resolvePostAuthRoute } from "@/routes/routeResolver";
+import { useTheme } from "@/components/ui/theme/ThemeProvider";
 
-// Get the base URL without /api suffix for general endpoints
-const BACKEND_URL = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
+import "@/styles/auth/Login.css";
+import "@/styles/global/GlobalUi.css";
+const BACKEND_URL = API_BASE_URL.endsWith("/api")
+  ? API_BASE_URL.slice(0, -4)
+  : API_BASE_URL;
 
-// Support both token-in-body and cookie-based sessions for login flows
-const finalizeAuthForLogin = async (resp, data) => {
-  try {
-    if (data && (data.access || data.refresh)) {
-      if (data.access) localStorage.setItem('access_token', data.access);
-      if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
-      return true;
-    }
+const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "1031953814986-q100q02ju0nc6h0p550l3sdcqt0si5m6.apps.googleusercontent.com";
 
-    const verifyResp = await fetch(`${BACKEND_URL}/dj-rest-auth/user/`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    return verifyResp.ok;
-  } catch (err) {
-    console.error('finalizeAuthForLogin error:', err);
-    return false;
-  }
+const IS_DEV =
+  !import.meta.env.MODE || import.meta.env.MODE === "development";
+
+const PHONE_SESSION_KEY = "phone_session";
+const DEBUG_OTP_KEY = "debug_otp";
+const GOOGLE_BUTTON_CONTAINER_ID = "google-button-container";
+const GOOGLE_SDK_SCRIPT_ID = "google-identity-services";
+const REMEMBER_ME_KEY = "teedhub_remember_me_email";
+
+let googleSdkPromise = null;
+let googleInitialized = false;
+
+const clearPhoneAuthSession = () => {
+  sessionStorage.removeItem(PHONE_SESSION_KEY);
+  sessionStorage.removeItem(DEBUG_OTP_KEY);
 };
 
-// --- Icon components for social providers (using inline SVG for simplicity and consistency) ---
-// --- Google Icon ---
-const GoogleIcon = (props) => (
-  <svg viewBox="0 0 48 48" {...props}>
-    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.91 3.57 30.29 2 24 2 15.17 2 7.51 5.34 2.89 11.45l7.98 6.19C13.23 11.23 18.25 9.5 24 9.5z" />
-    <path fill="#4285F4" d="M46.96 24c0-1.55-.13-3.08-.36-4.57h-22.9V28h13.34c-.87 4.96-4.66 8.52-9.2 8.52-5.91 0-10.74-4.7-10.74-10.5c0-5.8 4.83-10.5 10.74-10.5 2.87 0 5.48 1.15 7.46 3.01l4.58-4.58c-3.72-3.64-8.81-5.89-14.54-5.89C15.17 11.45 7.51 14.79 2.89 20.9l7.98 6.19C13.23 26.77 18.25 24 24 24c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.91 22.07 30.29 20 24 20c-8.83 0-16.5 3.34-21.12 9.45l7.98 6.19C13.23 34.77 18.25 33 24 33c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.91 30.57 30.29 28 24 28c-8.83 0-16.5 3.34-21.12 9.45l7.98 6.19C13.23 43.77 18.25 42 24 42c8.83 0 16.5-3.34 21.12-9.45l-7.98-6.19C32.77 39.23 27.75 41 24 41c-5.91 0-10.74-4.7-10.74-10.5z" />
-  </svg>
-);
+const getErrorMessage = (data, fallback = "Request failed.") => {
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+  if (data.message) return data.message;
+  if (data.detail) return data.detail;
+  if (data.error) return data.error;
+  if (data.email) return Array.isArray(data.email) ? data.email[0] : data.email;
+  if (data.password) {
+    return Array.isArray(data.password) ? data.password[0] : data.password;
+  }
+  return fallback;
+};
 
-// Initialize Google OAuth (run once on component mount)
-const initializeGoogleAuth = () => {
-  const GOOGLE_CLIENT_ID = "1031953814986-q100q02ju0nc6h0p550l3sdcqt0si5m6.apps.googleusercontent.com";
-  
-  if (!window.google) {
-    console.warn('Google API not loaded yet');
+const postJson = async (url, payload) => {
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await resp.json().catch(() => ({}));
+
+  if (!resp.ok) {
+    const error = new Error(getErrorMessage(data, "Request failed."));
+    error.payload = data;
+    throw error;
+  }
+
+  return data;
+};
+
+const loadGoogleSDK = () => {
+  if (window.google?.accounts?.id) {
+    return Promise.resolve(window.google);
+  }
+
+  if (googleSdkPromise) {
+    return googleSdkPromise;
+  }
+
+  googleSdkPromise = new Promise((resolve, reject) => {
+    const existingScript = document.getElementById(GOOGLE_SDK_SCRIPT_ID);
+
+    if (existingScript) {
+      const startedAt = Date.now();
+
+      const checkGoogle = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(checkGoogle);
+          resolve(window.google);
+          return;
+        }
+
+        if (Date.now() - startedAt > 10000) {
+          clearInterval(checkGoogle);
+          reject(new Error("Google SDK failed to initialize."));
+        }
+      }, 100);
+
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = GOOGLE_SDK_SCRIPT_ID;
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => {
+      if (window.google?.accounts?.id) {
+        resolve(window.google);
+      } else {
+        reject(new Error("Google SDK loaded but API is unavailable."));
+      }
+    };
+
+    script.onerror = () => {
+      reject(new Error("Failed to load Google SDK."));
+    };
+
+    document.head.appendChild(script);
+  });
+
+  return googleSdkPromise;
+};
+
+const getGoogleButtonWidth = (container) => {
+  const rawWidth = Math.floor(container?.offsetWidth || 0);
+
+  if (!rawWidth || Number.isNaN(rawWidth)) {
+    return 320;
+  }
+
+  return Math.max(220, Math.min(rawWidth, 420));
+};
+
+const renderGoogleButton = ({ darkMode = false }) => {
+  const container = document.getElementById(GOOGLE_BUTTON_CONTAINER_ID);
+
+  if (!container || !window.google?.accounts?.id) {
     return;
   }
 
-  try {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleAuthSuccess,
-    });
-    
-    // Render the Google Sign-In button into the container
-    google.accounts.id.renderButton(
-      document.getElementById('google-button-container'),
-      { theme: 'outline', size: 'large', width: '100%' }
-    );
-  } catch (err) {
-    console.error('Failed to initialize Google Auth:', err);
-  }
-};
+  container.innerHTML = "";
 
-// Handle successful Google authentication
-const handleGoogleAuthSuccess = async (response) => {
-  try {
-    const googleToken = response.credential;
-    
-    if (!googleToken) {
-      throw new Error('No credential received from Google');
-    }
-
-    // Token Exchange: Send Google ID Token to backend
-    const resp = await fetch(`${API_BASE_URL}/auth/google/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: googleToken }),
-    });
-
-    const data = await resp.json();
-    if (!resp.ok) {
-      throw new Error(data.error || "Google auth failed");
-    }
-
-    // Unified Session: Finalize with JWT tokens from backend
-    const finalized = await finalizeAuthForLogin(resp, data);
-    if (finalized) window.location.href = "/profile";
-    else throw new Error('Google login failed to finalize authentication');
-  } catch (err) {
-    console.error("Google auth error:", err);
-    alert("Google login failed: " + err.message);
-  }
+  window.google.accounts.id.renderButton(container, {
+    theme: darkMode ? "filled_black" : "outline",
+    size: "medium",
+    text: "continue_with",
+    shape: "pill",
+    width: getGoogleButtonWidth(container),
+  });
 };
 
 const FacebookIcon = (props) => (
   <svg viewBox="0 0 24 24" fill="none" {...props}>
-    <path fill="#1877F2" d="M12 2C6.477 2 2 6.477 2 12c0 5.084 3.791 9.36 8.75 9.923v-7.013H8.38v-2.91h2.37V9.75c0-2.348 1.433-3.636 3.523-3.636 1.002 0 1.956.074 2.223.107v2.54h-1.506c-1.118 0-1.336.531-1.336 1.312V12h2.813l-.454 2.91h-2.358v7.013C18.209 21.36 22 17.084 22 12c0-5.523-4.477-10-10-10z"/>
+    <path
+      fill="currentColor"
+      d="M12 2C6.477 2 2 6.477 2 12c0 5.084 3.791 9.36 8.75 9.923v-7.013H8.38v-2.91h2.37V9.75c0-2.348 1.433-3.636 3.523-3.636 1.002 0 1.956.074 2.223.107v2.54h-1.506c-1.118 0-1.336.531-1.336 1.312V12h2.813l-.454 2.91h-2.358v7.013C18.209 21.36 22 17.084 22 12c0-5.523-4.477-10-10-10z"
+    />
   </svg>
 );
-// ---------------------------------------------------------------------------------------
+
+const tabAnimation = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+  transition: { duration: 0.2 },
+};
+
+const isSecureFacebookOrigin = () => {
+  const { protocol, hostname } = window.location;
+
+  const isLocalhost =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1";
+
+  return protocol === "https:" || isLocalhost;
+};
+
+const loadFacebookSDK = () =>
+  new Promise((resolve, reject) => {
+    if (!FACEBOOK_APP_ID) {
+      reject(new Error("Missing VITE_FACEBOOK_APP_ID in .env"));
+      return;
+    }
+
+    if (!isSecureFacebookOrigin()) {
+      reject(
+        new Error(
+          "Facebook popup login is blocked on insecure LAN HTTP pages. Use localhost or HTTPS for testing."
+        )
+      );
+      return;
+    }
+
+    if (window.FB) {
+      resolve(window.FB);
+      return;
+    }
+
+    const existingScript = document.getElementById("facebook-jssdk");
+
+    if (existingScript) {
+      const startedAt = Date.now();
+
+      const checkFB = setInterval(() => {
+        if (window.FB) {
+          clearInterval(checkFB);
+          resolve(window.FB);
+          return;
+        }
+
+        if (Date.now() - startedAt > 10000) {
+          clearInterval(checkFB);
+          reject(new Error("Facebook SDK failed to initialize."));
+        }
+      }, 100);
+
+      return;
+    }
+
+    window.fbAsyncInit = function () {
+      try {
+        window.FB.init({
+          appId: FACEBOOK_APP_ID,
+          cookie: true,
+          xfbml: false,
+          version: "v19.0",
+        });
+
+        resolve(window.FB);
+      } catch {
+        reject(new Error("Failed to initialize Facebook SDK."));
+      }
+    };
+
+    const js = document.createElement("script");
+    js.id = "facebook-jssdk";
+    js.src = "https://connect.facebook.net/en_US/sdk.js";
+    js.async = true;
+    js.defer = true;
+    js.onerror = () =>
+      reject(new Error("Failed to load Facebook SDK script."));
+
+    document.body.appendChild(js);
+  });
+
+const useLoginNavigation = () => {
+  const navigate = useNavigate();
+  const { refreshAuthState, setAuthStateFromBackend } = useAuthState();
+
+  const finalizeLogin = useCallback(
+    async ({ access, refresh, post_auth }) => {
+      if (!access || !refresh) {
+        throw new Error("Login response did not include required tokens.");
+      }
+
+      setAuthTokens({ access, refresh });
+
+      let finalAuthState = null;
+
+      if (post_auth) {
+        finalAuthState = setAuthStateFromBackend(post_auth);
+      } else {
+        finalAuthState = await refreshAuthState();
+      }
+
+      navigate(resolvePostAuthRoute(finalAuthState), { replace: true });
+    },
+    [navigate, refreshAuthState, setAuthStateFromBackend]
+  );
+
+  return { finalizeLogin };
+};
 
 const useAuthForm = () => {
+  const navigate = useNavigate();
+  const { finalizeLogin } = useLoginNavigation();
+  const toast = useAppToast();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(REMEMBER_ME_KEY);
+
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleEmailPasswordLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-
-    // Placeholder for optional Cloudflare Turnstile token retrieval if needed
-    // The security is assumed to be handled at the network level via Cloudflare Bot Fight Mode or similar.
 
     try {
-      const resp = await fetch(`${BACKEND_URL}/api/auth/token/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const data = await postJson(`${BACKEND_URL}/api/auth/token/`, {
+        email,
+        password,
       });
 
-      const data = await resp.json();
-      if (!resp.ok) {
-        console.error("Login error response:", data);
-        throw new Error(data.detail || "Login failed. Check your credentials.");
+      if (rememberMe && email.trim()) {
+        localStorage.setItem(REMEMBER_ME_KEY, email.trim());
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY);
       }
 
-      console.log("Login successful, received tokens:", {
-        access: data.access ? 'Present' : 'Missing',
-        refresh: data.refresh ? 'Present' : 'Missing'
-      });
-
-      const finalized = await finalizeAuthForLogin(resp, data);
-      if (!finalized) throw new Error('Login failed to establish session');
-      
-      // Verify token was stored
-      const storedToken = localStorage.getItem('access_token');
-      console.log('Token stored in localStorage:', storedToken ? 'Yes' : 'No');
-      
-      window.location.href = "/profile";
+      toast.success("Login successful. Redirecting...");
+      await finalizeLogin(data);
     } catch (err) {
       console.error(err);
-      setError(err.message || "Login failed. Please try again.");
+
+      const nextStep = err?.payload?.next_step;
+      const errorCode = err?.payload?.error;
+
+      if (nextStep === "verify_email" || errorCode === "Email not verified") {
+        toast.warning("Your email is not verified yet. Finish signup first.");
+        navigate("/signup", {
+          replace: true,
+          state: {
+            email,
+            reason: "verify_email",
+          },
+        });
+        return;
+      }
+
+      toast.error(err.message || "Login failed. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
@@ -154,82 +355,161 @@ const useAuthForm = () => {
     setPassword,
     showPassword,
     setShowPassword,
+    rememberMe,
+    setRememberMe,
     loading,
-    error,
     handleEmailPasswordLogin,
   };
 };
 
-// Function to handle social login redirect (Google & Facebook via allauth)
-const handleSocialLogin = (provider) => {
-  // Google: /accounts/google/login/ (allauth)
-  // Facebook: /accounts/facebook/login/ (allauth)
-  window.location.href = `${BACKEND_URL}/accounts/${provider}/login/`;
-};
+function PasswordToggleButton({ show, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="login-password-toggle"
+      aria-label={show ? "Hide password" : "Show password"}
+    >
+      {show ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  );
+}
 
-// Function to handle phone OTP login
-const handlePhoneLogin = async (phone) => {
-  try {
-    const resp = await fetch(`${BACKEND_URL}/api/auth/phone/login/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
-    });
+function DevOTPPreview({ debugOtp }) {
+  if (!IS_DEV || !debugOtp) return null;
 
-    const data = await resp.json();
-    if (!resp.ok) {
-      throw new Error(data.detail || "Failed to send OTP");
-    }
+  return (
+    <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+      <p className="mb-2 text-xs font-semibold text-yellow-800">DEV OTP</p>
+      <div className="rounded-xl border border-yellow-200 bg-white p-3 text-center">
+        <p className="mb-1 text-xs text-gray-500">Use this verification code</p>
+        <p className="select-all text-2xl font-bold tracking-[0.35em] text-[#1F75FE]">
+          {debugOtp}
+        </p>
+      </div>
+    </div>
+  );
+}
 
-    // Store session ID for OTP verification
-    sessionStorage.setItem("phone_session", data.session_id);
-    return true;
-  } catch (err) {
-    console.error("Phone OTP error:", err);
-    throw err;
-  }
-};
+function EmailLogin({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  showPassword,
+  setShowPassword,
+  rememberMe,
+  setRememberMe,
+  loading,
+  handleEmailPasswordLogin,
+}) {
+  return (
+    <motion.div key="email-form" {...tabAnimation}>
+      <Form onSubmit={handleEmailPasswordLogin} spacing="md">
+        <Input
+          id="login-email"
+          type="email"
+          label="Email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          size="lg"
+          wrapperClassName="login-input-field"
+          className="login-input"
+        />
 
-// Function to verify phone OTP
-const handlePhoneOTPVerify = async (otp) => {
-  try {
-    const sessionId = sessionStorage.getItem("phone_session");
-    const resp = await fetch(`${BACKEND_URL}/api/auth/phone/verify/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, otp }),
-    });
+        <Input
+          id="login-password"
+          type={showPassword ? "text" : "password"}
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          rightIcon={
+            <PasswordToggleButton
+              show={showPassword}
+              onClick={() => setShowPassword(!showPassword)}
+            />
+          }
+          size="lg"
+          wrapperClassName="login-input-field"
+          className="login-input"
+        />
 
-    const data = await resp.json();
-    if (!resp.ok) {
-      throw new Error(data.detail || "OTP verification failed");
-    }
+        <FormMeta>
+          <div className="login-meta-left">
+            <label className="login-checkbox-label" htmlFor="login-remember-me">
+              <input
+                id="login-remember-me"
+                type="checkbox"
+                className="login-checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span className="login-checkbox-text min-w-0">Remember me</span>
+            </label>
+          </div>
 
-    localStorage.setItem("access_token", data.access);
-    localStorage.setItem("refresh_token", data.refresh);
-    window.location.href = "/profile";
-  } catch (err) {
-    console.error("OTP verify error:", err);
-    throw err;
-  }
-};
+          <Link to="/recover" className="login-link">
+            Forgot password?
+          </Link>
+        </FormMeta>
 
-// Mock Phone Number Login component
-const PhoneLogin = () => {
+        <FormActions>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            emphasis="strong"
+            fullWidth
+            loading={loading}
+            className="login-submit-button"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </FormActions>
+      </Form>
+    </motion.div>
+  );
+}
+
+function PhoneLogin() {
+  const { finalizeLogin } = useLoginNavigation();
+  const toast = useAppToast();
+
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
+  const [debugOtp, setDebugOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setDebugOtp(sessionStorage.getItem(DEBUG_OTP_KEY) || "");
+  }, []);
 
   const handleSendOTP = async () => {
     setLoading(true);
-    setError(null);
+
     try {
-      await handlePhoneLogin(phone);
+      clearPhoneAuthSession();
+
+      const data = await postJson(`${BACKEND_URL}/api/auth/phone/login/`, {
+        phone,
+      });
+
+      sessionStorage.setItem(PHONE_SESSION_KEY, data.session_id);
+
+      if (data.debug_otp) {
+        sessionStorage.setItem(DEBUG_OTP_KEY, data.debug_otp);
+        setDebugOtp(data.debug_otp);
+      } else {
+        setDebugOtp("");
+      }
+
       setOtpSent(true);
+      toast.success("OTP sent successfully.");
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message || "Failed to send OTP.");
     } finally {
       setLoading(false);
     }
@@ -237,539 +517,387 @@ const PhoneLogin = () => {
 
   const handleVerifyOTP = async () => {
     setLoading(true);
-    setError(null);
+
     try {
-      await handlePhoneOTPVerify(otp);
+      const sessionId = sessionStorage.getItem(PHONE_SESSION_KEY);
+
+      const data = await postJson(`${BACKEND_URL}/api/auth/phone/verify/`, {
+        session_id: sessionId,
+        otp,
+      });
+
+      clearPhoneAuthSession();
+      toast.success("Phone verified. Redirecting...");
+      await finalizeLogin(data);
     } catch (err) {
-      setError(err.message);
+      console.error("OTP verify error:", err);
+      toast.error(err.message || "OTP verification failed.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResetPhoneFlow = () => {
+    clearPhoneAuthSession();
+    setOtpSent(false);
+    setOtp("");
+    setDebugOtp("");
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-4"
-    >
-      {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
-      <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-        Receive a one-time code via SMS to verify your phone number
-      </p>
-      <div className="relative">
-        <Smartphone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="tel"
-          placeholder="Phone Number (e.g., +1 555-123-4567)"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          disabled={otpSent}
-          className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition disabled:opacity-50"
-          required
-        />
-      </div>
+    <motion.div key="phone-form" {...tabAnimation}>
       {!otpSent ? (
-        <button
-          onClick={handleSendOTP}
-          disabled={phone.length < 10 || loading}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition duration-300 shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {loading ? "Sending..." : "Send OTP"}
-        </button>
+        <Form as="div" spacing="md">
+          <Input
+            id="login-phone"
+            type="tel"
+            label="Phone number"
+            placeholder="Enter your phone number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            size="lg"
+            wrapperClassName="login-input-field"
+            className="login-input"
+          />
+
+          <FormActions>
+            <Button
+              type="button"
+              variant="accent"
+              size="lg"
+              emphasis="strong"
+              fullWidth
+              loading={loading}
+              className="login-submit-button"
+              onClick={handleSendOTP}
+              disabled={phone.trim().length < 10 || loading}
+            >
+              {loading ? "Sending..." : "Send OTP"}
+            </Button>
+          </FormActions>
+        </Form>
       ) : (
-        <div className="space-y-4">
-          <div className="relative">
-            <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Enter OTP (6 digits)"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              maxLength="6"
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-              required
-            />
-          </div>
-          <button
-            onClick={handleVerifyOTP}
-            disabled={otp.length !== 6 || loading}
-            className="w-full bg-[#1F75FE] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition duration-300 shadow-md disabled:opacity-50"
-          >
-            {loading ? "Verifying..." : "Verify & Sign In"}
-          </button>
-          <button
-            onClick={() => {
-              setOtpSent(false);
-              setOtp("");
-              setError(null);
-            }}
-            className="w-full text-center text-sm text-[#1F75FE] hover:underline"
-          >
-            Use a different phone number
-          </button>
-        </div>
+        <Form as="div" spacing="md">
+          <Input
+            id="login-otp"
+            type="text"
+            label="Verification code"
+            placeholder="Enter OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            maxLength="6"
+            size="lg"
+            wrapperClassName="login-input-field"
+            className="login-input"
+          />
+
+          <DevOTPPreview debugOtp={debugOtp} />
+
+          <FormActions>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              emphasis="strong"
+              fullWidth
+              loading={loading}
+              className="login-submit-button"
+              onClick={handleVerifyOTP}
+              disabled={otp.length !== 6 || loading}
+            >
+              {loading ? "Verifying..." : "Verify & Sign In"}
+            </Button>
+
+            <button
+              type="button"
+              onClick={handleResetPhoneFlow}
+              className="login-secondary-text-button"
+            >
+              Use a different phone number
+            </button>
+          </FormActions>
+        </Form>
       )}
     </motion.div>
   );
-};
-// Recovery Code Login Component
-const RecoveryCodeLogin = () => {
-  const [email, setEmail] = useState("");
-  const [recoveryCode, setRecoveryCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState({ new: false, confirm: false });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+}
 
-  const handleRecoveryCodeLogin = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    if (recoveryCode.length !== 12) {
-      setError("Recovery code must be exactly 12 digits");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const resp = await fetch(`${API_BASE_URL}/auth/recovery-login/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          recovery_code: recoveryCode,
-          new_password: newPassword,
-          confirm_password: confirmPassword,
-        }),
-      });
-
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.error || data.detail || "Recovery login failed");
-      }
-
-      if (data.access && data.refresh) {
-        localStorage.setItem("access_token", data.access);
-        localStorage.setItem("refresh_token", data.refresh);
-        setSuccess("Account recovered successfully! Redirecting...");
-        setTimeout(() => {
-          window.location.href = "/profile";
-        }, 1500);
-      }
-    } catch (err) {
-      setError(err.message || "Recovery code login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function SocialActionRow({
+  activeMethod,
+  onSelectPhone,
+  onSelectEmail,
+  onFacebookLogin,
+  facebookLoading,
+}) {
   return (
-    <motion.form
-      key="recovery-form"
-      onSubmit={handleRecoveryCodeLogin}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-4"
-    >
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-        >
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </motion.div>
-      )}
+    <div className="login-social-stack">
+      <div id={GOOGLE_BUTTON_CONTAINER_ID} className="login-google-container" />
 
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
-        >
-          <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
-        </motion.div>
-      )}
-
-      <div className="relative">
-        <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="email"
-          placeholder="Email Address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-          required
-        />
-      </div>
-
-      <div className="relative">
-        <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="12-Digit Recovery Code"
-          value={recoveryCode}
-          onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ""))}
-          maxLength="12"
-          className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-          required
-        />
-      </div>
-
-      <div className="relative">
-        <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type={showPassword.new ? "text" : "password"}
-          placeholder="New Password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full pl-12 pr-12 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-          required
-        />
+      <div className="login-social-row">
         <button
           type="button"
-          onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+          onClick={onFacebookLogin}
+          disabled={facebookLoading}
+          className="login-social-chip login-social-chip--facebook"
         >
-          {showPassword.new ? <EyeOff size={20} /> : <Eye size={20} />}
+          <FacebookIcon className="login-facebook-icon" />
+          <span>{facebookLoading ? "Connecting..." : "Facebook"}</span>
         </button>
-      </div>
 
-      <div className="relative">
-        <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type={showPassword.confirm ? "text" : "password"}
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full pl-12 pr-12 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-          required
-        />
         <button
           type="button"
-          onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+          onClick={activeMethod === "phone" ? onSelectEmail : onSelectPhone}
+          className={`login-social-chip ${
+            activeMethod === "phone" ? "is-active" : ""
+          }`}
         >
-          {showPassword.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
+          <Smartphone size={16} />
+          <span>{activeMethod === "phone" ? "Back to Email" : "Phone number"}</span>
         </button>
       </div>
-
-      <button
-        type="submit"
-        disabled={loading || !email || !recoveryCode || !newPassword || !confirmPassword}
-        className="w-full bg-[#1F75FE] hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition duration-300 shadow-md"
-      >
-        {loading ? "Recovering Account..." : "Recover & Sign In"}
-      </button>
-    </motion.form>
+    </div>
   );
-};
-export default function Login() {
-  const { email, setEmail, password, setPassword, showPassword, setShowPassword, loading, error, handleEmailPasswordLogin } = useAuthForm();
-  const [activeTab, setActiveTab] = useState("email"); // 'email', 'phone', 'recovery'
+}
 
-  // Initialize Google Auth on component mount
+export default function Login() {
+  const { finalizeLogin } = useLoginNavigation();
+  const toast = useAppToast();
+  const { darkMode } = useTheme();
+
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    showPassword,
+    setShowPassword,
+    rememberMe,
+    setRememberMe,
+    loading,
+    handleEmailPasswordLogin,
+  } = useAuthForm();
+
+  const googleHandlerRef = useRef(null);
+  const [activeMethod, setActiveMethod] = useState("email");
+  const [facebookLoading, setFacebookLoading] = useState(false);
+
+  const handleFacebookLogin = useCallback(async () => {
+    setFacebookLoading(true);
+
+    try {
+      const FB = await loadFacebookSDK();
+
+      FB.login(
+        function (response) {
+          (async () => {
+            try {
+              if (!response?.authResponse?.accessToken) {
+                throw new Error("Facebook login was cancelled or failed.");
+              }
+
+              const accessToken = response.authResponse.accessToken;
+
+              const data = await postJson(`${BACKEND_URL}/api/auth/facebook/`, {
+                access_token: accessToken,
+              });
+
+              toast.success("Facebook login successful. Redirecting...");
+              await finalizeLogin(data);
+            } catch (err) {
+              console.error("Facebook auth error:", err);
+              toast.error(err.message || "Facebook login failed.");
+            } finally {
+              setFacebookLoading(false);
+            }
+          })();
+        },
+        { scope: "public_profile" }
+      );
+    } catch (err) {
+      console.error("Facebook SDK error:", err);
+      toast.error(err.message || "Failed to load Facebook login.");
+      setFacebookLoading(false);
+    }
+  }, [finalizeLogin, toast]);
+
+  const handleGoogleSuccess = useCallback(
+    async (response) => {
+      try {
+        const googleToken = response?.credential;
+
+        if (!googleToken) {
+          throw new Error("No credential received from Google.");
+        }
+
+        const data = await postJson(`${BACKEND_URL}/api/auth/google/`, {
+          token: googleToken,
+        });
+
+        toast.success("Google login successful. Redirecting...");
+        await finalizeLogin(data);
+      } catch (err) {
+        console.error("Google auth error:", err);
+        toast.error(err.message || "Google login failed.");
+      }
+    },
+    [finalizeLogin, toast]
+  );
+
   useEffect(() => {
-    initializeGoogleAuth();
+    googleHandlerRef.current = handleGoogleSuccess;
+  }, [handleGoogleSuccess]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const setupGoogle = async () => {
+      if (!GOOGLE_CLIENT_ID) {
+        toast.warning("Missing VITE_GOOGLE_CLIENT_ID in environment.");
+        return;
+      }
+
+      try {
+        await loadGoogleSDK();
+
+        if (cancelled || !window.google?.accounts?.id) {
+          return;
+        }
+
+        if (!googleInitialized) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (response) => {
+              const handler = googleHandlerRef.current;
+              if (typeof handler === "function") {
+                handler(response);
+              }
+            },
+          });
+
+          googleInitialized = true;
+        }
+
+        renderGoogleButton({ darkMode });
+      } catch (err) {
+        console.error("Failed to initialize Google Auth:", err);
+        toast.warning(err.message || "Failed to initialize Google sign-in.");
+      }
+    };
+
+    setupGoogle();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [darkMode, toast]);
+
+  useEffect(() => {
+    const rerenderGoogleButton = () => {
+      if (window.google?.accounts?.id) {
+        renderGoogleButton({ darkMode });
+      }
+    };
+
+    window.addEventListener("resize", rerenderGoogleButton);
+
+    return () => {
+      window.removeEventListener("resize", rerenderGoogleButton);
+    };
+  }, [darkMode]);
+
+  useEffect(() => {
+    return () => {
+      clearPhoneAuthSession();
+
+      const container = document.getElementById(GOOGLE_BUTTON_CONTAINER_ID);
+      if (container) {
+        container.innerHTML = "";
+      }
+    };
   }, []);
 
-  const benefits = [
-    { icon: "💳", title: "Secure Payments", desc: "Advanced security measures protect your transactions" },
-    { icon: "📊", title: "Real-time Analytics", desc: "Track your business metrics instantly" },
-    { icon: "🌍", title: "Global Reach", desc: "Expand your business across continents" },
-  ];
-
-  const SocialButton = ({ icon: Icon, title, provider, bgColor, hoverColor }) => (
-    <motion.button
-      whileTap={{ scale: 0.98 }}
-      onClick={() => handleSocialLogin(provider)}
-      className={`w-full flex items-center justify-center gap-3 p-3 rounded-xl font-semibold border ${bgColor} ${hoverColor} transition duration-200 shadow-sm`}
-    >
-      <Icon className="w-5 h-5" />
-      <span>Sign in with {title}</span>
-    </motion.button>
-  );
-
   return (
-    <>
-      {/* Background decorative elements */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 w-72 h-72 bg-[#1F75FE] rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-        <div className="absolute -bottom-20 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-      </div>
+    <AuthLayout>
+      <div className="login-page">
+        <div className="login-shell">
+          <motion.div
+            initial={{ opacity: 0, x: -18 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35 }}
+            className="login-hero"
+          >
+            <div className="login-hero__content">
+              <span className="login-hero__eyebrow">Welcome back</span>
+              <h1 className="login-hero__title">
+                Sign in and continue building.
+              </h1>
+              <p className="login-hero__text">
+                Keep your flow clean. Get into your workspace without noise.
+              </p>
+            </div>
+          </motion.div>
 
-      {/* Main Login Section */}
-      <section className="w-full bg-white dark:bg-[#252526] transition-colors duration-300 relative z-10 min-h-screen flex items-center justify-center py-10">
-        <div className="px-3 sm:px-5 md:px-8 lg:px-12 w-full max-w-7xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
-            {/* Left Side - Benefits (hidden on mobile) */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="hidden md:flex flex-col space-y-8"
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.99 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.35 }}
+            className="login-panel"
+          >
+            <Card
+              variant="soft"
+              padding="lg"
+              contentSpacing="lg"
+              className="login-card"
             >
-              <div>
-                <motion.h2
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2, duration: 0.8 }}
-                  className="text-3xl lg:text-4xl font-bold text-[#1E1E1E] dark:text-[#D4D4D4] mb-3"
-                >
-                  Welcome to TEED Hub
-                </motion.h2>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3, duration: 0.8 }}
-                  className="text-lg text-[#4A4A4A] dark:text-[#A0A0A0]"
-                >
-                  Empower your business with our comprehensive suite of tools
-                </motion.p>
+              <div className="login-card__header">
+                <h2 className="login-card__title">
+                  Sign in to <span className="login-brand-main">TEED</span>
+                  <span className="login-brand-accent">HUB</span>
+                </h2>
+                <p className="login-card__subtitle">
+                  Use your account and get back to work.
+                </p>
               </div>
 
-              <div className="space-y-4">
-                {benefits.map((benefit, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + idx * 0.1, duration: 0.6 }}
-                    className="flex gap-4 items-start"
-                  >
-                    <div className="text-3xl flex-shrink-0">{benefit.icon}</div>
-                    <div>
-                      <h3 className="font-semibold text-[#1E1E1E] dark:text-[#D4D4D4]">
-                        {benefit.title}
-                      </h3>
-                      <p className="text-sm text-[#4A4A4A] dark:text-[#A0A0A0] mt-1">
-                        {benefit.desc}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Right Side - Login Form */}
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="w-full max-w-md mx-auto"
-            >
-              <div className="bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#3A3A3A] rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg dark:shadow-2xl">
-                
-                {/* Heading */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3, duration: 0.8 }}
-                  className="text-center mb-8"
-                >
-                  <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] dark:text-[#D4D4D4] mb-2">
-                    Sign In to Your Account
-                  </h1>
-                  <p className="text-sm text-[#4A4A4A] dark:text-[#A0A0A0]">
-                    Choose your preferred login method
-                  </p>
-                </motion.div>
-
-                {/* Error Message */}
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-                  >
-                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                  </motion.div>
-                )}
-                
-                {/* --- Social Login Options --- */}
-                <div className="space-y-3 mb-6">
-                  {/* Google Sign-In Button Container - will be rendered by Google API */}
-                  <div id="google-button-container" className="flex justify-center"></div>
-                  
-                  <SocialButton
-                    icon={() => <FacebookIcon className="w-5 h-5" />}
-                    title="Facebook"
-                    provider="facebook"
-                    bgColor="bg-[#1877F2] border-[#1877F2] text-white"
-                    hoverColor="hover:bg-[#1569d9] hover:border-[#1569d9]"
-                  />
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-[#3A3A3A]"></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">
-                    Or sign in with
-                  </span>
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-[#3A3A3A]"></div>
-                </div>
-
-                {/* --- Tab Selector for Email vs. Phone vs. Recovery --- */}
-                <div className="flex gap-1 bg-gray-100 dark:bg-[#252526] p-1 rounded-xl mb-6">
-                  <button
-                    onClick={() => setActiveTab('email')}
-                    className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition duration-300 ${
-                      activeTab === 'email' ? 'bg-white text-[#1F75FE] shadow' : 'text-gray-500 dark:text-gray-400 hover:text-[#1F75FE]'
-                    }`}
-                  >
-                    Email
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('phone')}
-                    className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition duration-300 ${
-                      activeTab === 'phone' ? 'bg-white text-[#1F75FE] shadow' : 'text-gray-500 dark:text-gray-400 hover:text-[#1F75FE]'
-                    }`}
-                  >
-                    Phone
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('recovery')}
-                    className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition duration-300 ${
-                      activeTab === 'recovery' ? 'bg-white text-[#1F75FE] shadow' : 'text-gray-500 dark:text-gray-400 hover:text-[#1F75FE]'
-                    }`}
-                  >
-                    Recovery
-                  </button>
-                </div>
-
-                {/* --- Active Tab Content --- */}
-                <div className="min-h-[150px]">
-                  {activeTab === 'email' && (
-                    <motion.form
-                      key="email-form"
-                      onSubmit={handleEmailPasswordLogin}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5 }}
-                      className="space-y-4"
-                    >
-                      <div className="relative">
-                        <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="email"
-                          placeholder="Email Address"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-                          required
-                        />
-                      </div>
-                      <div className="relative">
-                        <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full pl-12 pr-12 py-3 border border-gray-300 dark:border-[#3A3A3A] rounded-xl dark:bg-[#252526] dark:text-white focus:ring-2 focus:ring-[#1F75FE] focus:border-transparent transition"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1F75FE]"
-                        >
-                          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                        </button>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-[#1F75FE] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition duration-300 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {loading ? 'Signing In...' : 'Sign In'}
-                      </button>
-                      <a
-                        href="/recover"
-                        className="w-full bg-white dark:bg-[#252526] text-[#1E1E1E] dark:text-white border border-gray-300 dark:border-[#3A3A3A] font-semibold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 hover:bg-[#1F75FE] hover:text-white hover:border-[#1F75FE]"
-                      >
-                        Forgotten Password?
-                      </a>
-                    </motion.form>
+              <div className="login-form-stage">
+                <AnimatePresence mode="wait">
+                  {activeMethod === "email" ? (
+                    <EmailLogin
+                      email={email}
+                      setEmail={setEmail}
+                      password={password}
+                      setPassword={setPassword}
+                      showPassword={showPassword}
+                      setShowPassword={setShowPassword}
+                      rememberMe={rememberMe}
+                      setRememberMe={setRememberMe}
+                      loading={loading}
+                      handleEmailPasswordLogin={handleEmailPasswordLogin}
+                    />
+                  ) : (
+                    <PhoneLogin />
                   )}
-                  {activeTab === 'phone' && <PhoneLogin />}
-                  {activeTab === 'recovery' && <RecoveryCodeLogin />}
-                </div>
-
-                {/* Security Features */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.8 }}
-                  className="space-y-3 mt-6 pt-6 border-t border-gray-100 dark:border-[#3A3A3A]"
-                >
-                  <p className="text-center text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
-                    Protected by Cloudflare
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-[#4A4A4A] dark:text-[#A0A0A0]">
-                    <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
-                    <span>Bot protection handled at the network edge.</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[#4A4A4A] dark:text-[#A0A0A0]">
-                    <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
-                    <span>Your data is encrypted and secure.</span>
-                  </div>
-                </motion.div>
-
-                {/* Footer Note */}
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6, duration: 0.8 }}
-                  className="text-xs text-gray-500 dark:text-gray-400 text-center mt-6"
-                >
-                  By signing in, you agree to our{" "}
-                  <a href="#" className="text-[#1F75FE] hover:underline">
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a href="#" className="text-[#1F75FE] hover:underline">
-                    Privacy Policy
-                  </a>
-                </motion.p>
+                </AnimatePresence>
               </div>
 
-              {/* Additional Info */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7, duration: 0.8 }}
-                className="text-xs text-[#4A4A4A] dark:text-[#A0A0A0] text-center mt-6"
-              >
-                Don't have an account?{" "}
-                <a href="/signup" className="text-[#1F75FE] hover:underline font-semibold">
-                  Sign up now
-                </a>
-              </motion.p>
-            </motion.div>
-          </div>
+              <SocialActionRow
+                activeMethod={activeMethod}
+                onSelectPhone={() => setActiveMethod("phone")}
+                onSelectEmail={() => setActiveMethod("email")}
+                onFacebookLogin={handleFacebookLogin}
+                facebookLoading={facebookLoading}
+              />
+
+              <p className="login-footer-text">
+                Don&apos;t have an account?{" "}
+                <Link to="/signup" className="login-link login-link--strong">
+                  Create one
+                </Link>
+              </p>
+            </Card>
+          </motion.div>
         </div>
-      </section>
-    </>
+      </div>
+    </AuthLayout>
   );
 }

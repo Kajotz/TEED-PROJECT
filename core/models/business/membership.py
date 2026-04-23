@@ -1,22 +1,15 @@
+import uuid
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from .business import Business
-
-User = settings.AUTH_USER_MODEL
 
 
 class BusinessMember(models.Model):
-    """
-    Membership record for a user inside a business.
-
-    Important:
-    - This model does NOT store a direct `role` field.
-    - Roles are attached through MemberRole.
-    - This is the core bridge for BRAC/RBAC.
-    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="business_memberships",
     )
@@ -40,33 +33,19 @@ class BusinessMember(models.Model):
     def __str__(self):
         return f"{self.user} @ {self.business}"
 
-    # -----------------------------
-    # Helper methods for gradual cleanup
-    # -----------------------------
-
     def roles_qs(self):
-        """
-        Returns queryset of Role objects assigned to this member.
-        """
+        if not self.is_active:
+            return Role.objects.none()
         return Role.objects.filter(
             role_members__member=self
         ).distinct()
 
     def role_names(self):
-        """
-        Returns list of role names.
-        Useful while refactoring old views/serializers.
-        """
         return list(
             self.roles_qs().values_list("name", flat=True)
         )
 
     def primary_role(self):
-        """
-        Temporary convenience helper for old code paths
-        that still expect one role.
-        Priority is based on common business hierarchy.
-        """
         priority = ["owner", "admin", "manager", "staff", "analyst", "viewer"]
         names = self.role_names()
 
@@ -83,10 +62,8 @@ class BusinessMember(models.Model):
         return self.roles_qs().filter(name__in=role_names).exists()
 
     def permissions_qs(self):
-        """
-        Returns queryset of Permission objects available to this member
-        through assigned roles.
-        """
+        if not self.is_active:
+            return Permission.objects.none()
         return Permission.objects.filter(
             permission_roles__role__role_members__member=self
         ).distinct()
@@ -101,15 +78,7 @@ class BusinessMember(models.Model):
 
 
 class Role(models.Model):
-    """
-    Custom role scoped to a single business.
-    Example:
-    - owner
-    - admin
-    - manager
-    - inventory_manager
-    - analyst
-    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     name = models.CharField(max_length=100)
 
@@ -137,20 +106,6 @@ class Role(models.Model):
 
 
 class Permission(models.Model):
-    """
-    Global permission registry.
-
-    Examples:
-    - business.view
-    - business.manage
-    - members.view
-    - members.invite
-    - members.update
-    - roles.manage
-    - analytics.view
-    - social_accounts.manage
-    """
-
     code = models.CharField(max_length=120, unique=True)
     description = models.TextField(blank=True)
 
@@ -159,10 +114,6 @@ class Permission(models.Model):
 
 
 class RolePermission(models.Model):
-    """
-    Bridge: Role -> Permission
-    """
-
     role = models.ForeignKey(
         Role,
         on_delete=models.CASCADE,
@@ -186,11 +137,6 @@ class RolePermission(models.Model):
 
 
 class MemberRole(models.Model):
-    """
-    Bridge: BusinessMember -> Role
-    Allows multiple roles per member.
-    """
-
     member = models.ForeignKey(
         BusinessMember,
         on_delete=models.CASCADE,
@@ -208,6 +154,14 @@ class MemberRole(models.Model):
         indexes = [
             models.Index(fields=["member"]),
         ]
+
+    def clean(self):
+        if self.member.business_id != self.role.business_id:
+            raise ValidationError("Role must belong to the same business as the member.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.member} -> {self.role.name}"

@@ -1,0 +1,363 @@
+.switch-business-page {
+  width: 100%;
+  padding: 1.2rem 1rem 2rem;
+}
+
+.switch-business-page__inner {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.switch-business-page__hero {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.switch-business-page__top-bar {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.switch-business-page__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.switch-business-page__back-btn:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.switch-business-page__hero-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1f75fe;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.switch-business-page__hero-copy h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #111827;
+}
+
+.switch-business-page__hero-copy p {
+  margin: 0.65rem auto 0;
+  max-width: 640px;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: #6b7280;
+}
+
+.switch-business-page__alert {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.switch-business-page__loading-card {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  border-radius: 28px;
+}
+
+.switch-business-page__loading-state {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.switch-business-page__loading-state p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.switch-business-page__spinner,
+.switch-business-page__button-spinner {
+  animation: switch-business-spin 0.9s linear infinite;
+}
+
+.switch-business-page__grid {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.switch-business-page__card {
+  height: 100%;
+  border-radius: 28px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.switch-business-page__card:hover {
+  transform: translateY(-2px);
+}
+
+.switch-business-page__card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.switch-business-page__card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 117, 254, 0.1);
+  color: #1f75fe;
+}
+
+.switch-business-page__card-head {
+  min-width: 0;
+  flex: 1;
+}
+
+.switch-business-page__card-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #111827;
+  word-break: break-word;
+}
+
+.switch-business-page__badges {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.switch-business-page__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.switch-business-page__badge--type {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.switch-business-page__badge--active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.switch-business-page__card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.switch-business-page__role-box {
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 20px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.switch-business-page__role-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.switch-business-page__role-text {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.7;
+  font-weight: 600;
+  color: #1f2937;
+  text-transform: capitalize;
+}
+
+.switch-business-page__button-wrap {
+  padding-top: 0.4rem;
+}
+
+.switch-business-page__button {
+  min-height: 48px;
+  border-radius: 18px;
+}
+
+.switch-business-page__button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+@keyframes switch-business-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dark .switch-business-page__back-btn {
+  color: #d1d5db;
+}
+
+.dark .switch-business-page__back-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .switch-business-page__hero-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.dark .switch-business-page__hero-copy h1 {
+  color: #f9fafb;
+}
+
+.dark .switch-business-page__hero-copy p {
+  color: #9ca3af;
+}
+
+.dark .switch-business-page__alert {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(127, 29, 29, 0.22);
+  color: #fca5a5;
+}
+
+.dark .switch-business-page__loading-state p {
+  color: #d1d5db;
+}
+
+.dark .switch-business-page__card-head h2 {
+  color: #f9fafb;
+}
+
+.dark .switch-business-page__badge--type {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+.dark .switch-business-page__badge--active {
+  background: rgba(16, 185, 129, 0.16);
+  color: #86efac;
+}
+
+.dark .switch-business-page__role-box {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .switch-business-page__role-label {
+  color: #9ca3af;
+}
+
+.dark .switch-business-page__role-text {
+  color: #f3f4f6;
+}
+
+@media (max-width: 900px) {
+  .switch-business-page__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .switch-business-page {
+    padding: 1rem 0.9rem 1.5rem;
+  }
+
+  .switch-business-page__inner {
+    gap: 1.5rem;
+  }
+
+  .switch-business-page__hero {
+    gap: 0.55rem;
+  }
+
+  .switch-business-page__hero-copy h1 {
+    font-size: 1.65rem;
+  }
+
+  .switch-business-page__hero-copy p {
+    font-size: 0.92rem;
+    line-height: 1.65;
+  }
+
+  .switch-business-page__card-top {
+    gap: 0.85rem;
+  }
+
+  .switch-business-page__card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+  }
+
+  .switch-business-page__role-box {
+    padding: 0.95rem;
+  }
+}

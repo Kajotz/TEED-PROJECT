@@ -1,0 +1,299 @@
+/* =========================================================
+   GLOBAL FORM SYSTEM
+   This styles raw inputs/selects/textareas used inside Form.jsx
+   so pages like CreateBusinessPage get cleaner UI automatically.
+========================================================= */
+
+.ui-form {
+  --form-radius: 18px;
+  --form-height: 56px;
+  --form-padding-x: 18px;
+  --form-text: #111827;
+  --form-label: #1f2937;
+  --form-muted: #6b7280;
+  --form-border: #e5e7eb;
+  --form-bg: #ffffff;
+  --form-focus: #1f75fe;
+  --form-focus-ring: rgba(31, 117, 254, 0.12);
+  --form-error: #ef4444;
+  --form-error-text: #dc2626;
+  --form-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+/* ---------- dark mode via prefers-color-scheme ---------- */
+
+@media (prefers-color-scheme: dark) {
+  .ui-form {
+    --form-text: #f3f4f6;
+    --form-label: #e5e7eb;
+    --form-muted: #9ca3af;
+    --form-border: rgba(255, 255, 255, 0.1);
+    --form-bg: rgba(255, 255, 255, 0.05);
+    --form-focus: #1f75fe;
+    --form-focus-ring: rgba(31, 117, 254, 0.2);
+    --form-error: #f87171;
+    --form-error-text: #fca5a5;
+    --form-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* ---------- dark mode via .dark class (Tailwind / manual toggle) ---------- */
+
+.dark .ui-form,
+[data-theme="dark"] .ui-form,
+.ui-form[data-theme="dark"] {
+  --form-text: #f3f4f6;
+  --form-label: #e5e7eb;
+  --form-muted: #9ca3af;
+  --form-border: rgba(255, 255, 255, 0.1);
+  --form-bg: rgba(255, 255, 255, 0.05);
+  --form-focus: #1f75fe;
+  --form-focus-ring: rgba(31, 117, 254, 0.2);
+  --form-error: #f87171;
+  --form-error-text: #fca5a5;
+  --form-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- field wrappers ---------- */
+
+.ui-form .form-group,
+.ui-form .ui-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ui-form .form-block,
+.ui-form .ui-form-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+/* ---------- labels ---------- */
+
+.ui-form label:not(.ignore-form-style) {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--form-label);
+  line-height: 1.35;
+}
+
+/* ---------- shared control styles ---------- */
+
+.ui-form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.ui-form select,
+.ui-form textarea {
+  width: 100%;
+  border-radius: var(--form-radius);
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
+  color: var(--form-text);
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+  box-shadow: var(--form-shadow);
+  font-size: 0.98rem;
+}
+
+/* ---------- input ---------- */
+
+.ui-form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+  min-height: var(--form-height);
+  padding: 0 var(--form-padding-x);
+}
+
+/* ---------- select ---------- */
+
+.ui-form select {
+  min-height: var(--form-height);
+  padding: 0 calc(var(--form-padding-x) + 18px) 0 var(--form-padding-x);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9ca3af 50%),
+    linear-gradient(135deg, #9ca3af 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 3px),
+    calc(100% - 16px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* dark mode select arrow — lighter chevron on dark bg */
+@media (prefers-color-scheme: dark) {
+  .ui-form select {
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6b7280 50%),
+      linear-gradient(135deg, #6b7280 50%, transparent 50%);
+  }
+}
+
+.dark .ui-form select,
+[data-theme="dark"] .ui-form select,
+.ui-form[data-theme="dark"] select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%);
+}
+
+/* ---------- textarea ---------- */
+
+.ui-form textarea {
+  min-height: 120px;
+  padding: 16px var(--form-padding-x);
+  resize: vertical;
+  line-height: 1.55;
+}
+
+/* ---------- placeholders ---------- */
+
+.ui-form input::placeholder,
+.ui-form textarea::placeholder {
+  color: #9ca3af;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ui-form input::placeholder,
+  .ui-form textarea::placeholder {
+    color: #6b7280;
+  }
+}
+
+.dark .ui-form input::placeholder,
+.dark .ui-form textarea::placeholder,
+[data-theme="dark"] .ui-form input::placeholder,
+[data-theme="dark"] .ui-form textarea::placeholder {
+  color: #6b7280;
+}
+
+/* ---------- focus ---------- */
+
+.ui-form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.ui-form select:focus,
+.ui-form textarea:focus {
+  border-color: var(--form-focus);
+  box-shadow:
+    0 0 0 4px var(--form-focus-ring),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+/* ---------- disabled ---------- */
+
+.ui-form input:disabled,
+.ui-form select:disabled,
+.ui-form textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  background: #f9fafb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ui-form input:disabled,
+  .ui-form select:disabled,
+  .ui-form textarea:disabled {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.dark .ui-form input:disabled,
+.dark .ui-form select:disabled,
+.dark .ui-form textarea:disabled,
+[data-theme="dark"] .ui-form input:disabled,
+[data-theme="dark"] .ui-form select:disabled,
+[data-theme="dark"] .ui-form textarea:disabled {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ---------- helper / error ---------- */
+
+.ui-form .form-helper,
+.ui-form .ui-form-helper {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--form-muted);
+  line-height: 1.5;
+}
+
+.ui-form .form-error,
+.ui-form .ui-form-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--form-error-text);
+  line-height: 1.45;
+}
+
+/* ---------- explicit error class support ---------- */
+
+.ui-form .error,
+.ui-form .is-error,
+.ui-form input.form-error-input,
+.ui-form select.form-error-input,
+.ui-form textarea.form-error-input {
+  border-color: var(--form-error) !important;
+}
+
+.ui-form .error:focus,
+.ui-form .is-error:focus,
+.ui-form input.form-error-input:focus,
+.ui-form select.form-error-input:focus,
+.ui-form textarea.form-error-input:focus {
+  border-color: var(--form-error) !important;
+  box-shadow:
+    0 0 0 4px rgba(239, 68, 68, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ui-form .error:focus,
+  .ui-form .is-error:focus,
+  .ui-form input.form-error-input:focus,
+  .ui-form select.form-error-input:focus,
+  .ui-form textarea.form-error-input:focus {
+    box-shadow:
+      0 0 0 4px rgba(248, 113, 113, 0.2),
+      0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  }
+}
+
+.dark .ui-form .error:focus,
+.dark .ui-form .is-error:focus,
+.dark .ui-form input.form-error-input:focus,
+.dark .ui-form select.form-error-input:focus,
+.dark .ui-form textarea.form-error-input:focus,
+[data-theme="dark"] .ui-form .error:focus,
+[data-theme="dark"] .ui-form .is-error:focus,
+[data-theme="dark"] .ui-form input.form-error-input:focus,
+[data-theme="dark"] .ui-form select.form-error-input:focus,
+[data-theme="dark"] .ui-form textarea.form-error-input:focus {
+  box-shadow:
+    0 0 0 4px rgba(248, 113, 113, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ---------- keep checkbox/radio normal ---------- */
+
+.ui-form input[type="checkbox"],
+.ui-form input[type="radio"] {
+  box-shadow: none;
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 640px) {
+  .ui-form {
+    --form-height: 54px;
+    --form-padding-x: 16px;
+    --form-radius: 16px;
+  }
+}

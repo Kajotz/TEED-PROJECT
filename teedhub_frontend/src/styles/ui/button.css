@@ -1,0 +1,145 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+
+  border: none;
+  outline: none;
+  cursor: pointer;
+
+  border-radius: 8px;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.2s ease;
+
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 4px rgba(31, 117, 254, 0.15);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.btn-sm {
+  height: 42px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.btn-md {
+  height: 48px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
+.btn-lg {
+  height: 56px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+
+.btn-xl {
+  height: 64px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+
+/* =========================
+   PRIMARY (Main Action)
+   ========================= */
+.btn-primary {
+  background: #1f75fe;
+  color: #ffffff;
+  border: 1px solid #1f75fe;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1666e8;
+  border-color: #1666e8;
+}
+
+.btn-primary:focus-visible {
+  box-shadow: 0 0 0 4px rgba(31, 117, 254, 0.2);
+}
+
+/* =========================
+   SECONDARY (Important)
+   ========================= */
+.btn-secondary {
+  background: #f2a705;
+  color: #111111;
+  border: 1px solid #e29504;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #d98f04;
+  border-color: #d98f04;
+}
+
+.btn-secondary:focus-visible {
+  box-shadow: 0 0 0 4px rgba(242, 167, 5, 0.25);
+}
+
+/* =========================
+   GHOST (Neutral / Cancel)
+   ========================= */
+.btn-ghost {
+  background: transparent;
+  color: var(--account-text, #111111);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dark .btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-ghost:focus-visible {
+  box-shadow: 0 0 0 4px rgba(100, 116, 139, 0.2);
+}
+
+/* Behavior */
+.btn-full {
+  width: 100%;
+}
+
+.btn-wrap {
+  white-space: normal;
+}
+
+/* States */
+.btn-loading,
+.btn:disabled {
+  opacity: 0.65;
+}
+
+/* Inner content */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

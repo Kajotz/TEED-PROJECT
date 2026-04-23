@@ -112,3 +112,29 @@ class BusinessProfileForm(forms.ModelForm):
             return True
         except ValueError:
             return False
+        
+class BusinessProfileForm(forms.ModelForm):
+    ...
+
+    instagram = forms.CharField(required=False)
+    facebook = forms.CharField(required=False)
+    tiktok = forms.CharField(required=False)
+    whatsapp = forms.CharField(required=False)
+    theme = forms.CharField(required=False)
+
+    class Meta:
+        model = BusinessProfile
+        fields = [
+            'logo',
+            'primary_color',
+            'secondary_color',
+            'theme',
+            'about',
+            'contact_email',
+            'contact_phone',
+            'website',
+            'instagram',
+            'facebook',
+            'tiktok',
+            'whatsapp',
+        ]        

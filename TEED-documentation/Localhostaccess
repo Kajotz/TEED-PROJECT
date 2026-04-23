@@ -1,0 +1,4 @@
+The phone login issue is not magic. It is usually one of these:
+localhost on your desktop means “this same desktop.” On your phone, localhost means “the phone itself,” not your PC. So if your frontend or backend config still points to localhost, the phone is calling itself, not your machine.
+Also check these hard:
+your Vite dev server must run on 0.0.0.0, your Django server must also run on 0.0.0.0, Windows firewall must allow the ports, ALLOWED_HOSTS must include 192.168.1.5, and your frontend API base URL must use http://192.168.1.5:8000 instead of http://localhost:8000. If Google login is involved, that origin also has to be allowed in Google console.

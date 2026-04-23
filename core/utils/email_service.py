@@ -311,39 +311,38 @@ class EmailService:
             return False
     
     @staticmethod
-    def send_password_reset_code(email, recovery_code, username_display):
+    def send_password_reset_code(email, recovery_code, display_name):
         """
         Send password reset code to user email
-        
+
         Args:
             email: User's email address
             recovery_code: 12-digit recovery code
-            username_display: Display name for personalization
-        
+            display_name: Name for personalization
+
         Returns:
             bool: True if sent successfully
         """
         try:
             subject = "TEED Hub - Password Reset Code"
-            
-            # Format code for better readability
+
             formatted_code = f"{recovery_code[:4]}-{recovery_code[4:8]}-{recovery_code[8:12]}"
-            
+
             html_message = f"""
             <html>
                 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <div style="background-color: #f5f5f5; padding: 20px;">
                         <h2 style="color: #1F75FE; margin-bottom: 20px;">Password Reset Request</h2>
-                        
+
                         <p style="color: #333; font-size: 16px; line-height: 1.6;">
-                            Hi {username_display},
+                            Hi {display_name},
                         </p>
-                        
+
                         <p style="color: #333; font-size: 14px; line-height: 1.6;">
-                            We received a request to reset your TEED Hub account password. 
+                            We received a request to reset your TEED Hub account password.
                             If you didn't request this, please ignore this email and your password will remain unchanged.
                         </p>
-                        
+
                         <div style="background-color: white; border: 2px solid #1F75FE; border-radius: 8px; padding: 25px; margin: 25px 0; text-align: center;">
                             <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">Your password reset code is:</p>
                             <p style="font-size: 24px; font-weight: bold; color: #1F75FE; letter-spacing: 3px; font-family: monospace; margin: 0 0 10px 0;">
@@ -351,46 +350,30 @@ class EmailService:
                             </p>
                             <p style="color: #999; font-size: 12px; margin: 0;">This code expires in 30 minutes</p>
                         </div>
-                        
-                        <p style="color: #333; font-size: 14px; line-height: 1.6;">
-                            <strong>Next steps:</strong><br>
-                            1. Go to the password recovery page<br>
-                            2. Verify your identity (username and recovery phone)<br>
-                            3. Enter the code above<br>
-                            4. Create a new password
-                        </p>
-                        
+
                         <div style="background-color: #ffe8e8; border-left: 4px solid #f44336; padding: 15px; margin: 20px 0; border-radius: 4px;">
                             <p style="color: #c62828; font-weight: bold; margin-top: 0;">⚠️ Security Notice:</p>
                             <p style="color: #c62828; font-size: 13px; margin-bottom: 0;">
                                 Never share this code with anyone. TEED Hub support will never ask for this code.
                             </p>
                         </div>
-                        
-                        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                        
-                        <p style="color: #999; font-size: 12px; text-align: center;">
-                            TEED Hub © 2024. All rights reserved.<br>
-                            <a href="#" style="color: #1F75FE; text-decoration: none;">Security Center</a> | 
-                            <a href="#" style="color: #1F75FE; text-decoration: none;">Privacy Policy</a>
-                        </p>
                     </div>
                 </body>
             </html>
             """
-            
+
             text_message = f"""
             Password Reset Code - TEED Hub
-            
-            Hi {username_display},
-            
+
+            Hi {display_name},
+
             Your password reset code is: {formatted_code}
-            
+
             This code expires in 30 minutes.
-            
+
             If you didn't request this, please ignore this email.
             """
-            
+
             send_mail(
                 subject=subject,
                 message=text_message,
@@ -399,11 +382,10 @@ class EmailService:
                 html_message=html_message,
                 fail_silently=False,
             )
-            
+
             logger.info(f"Password reset code sent to {email}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send password reset code to {email}: {str(e)}")
             return False
-

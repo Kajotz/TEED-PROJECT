@@ -4,13 +4,13 @@ from .user_profile import (
     BusinessDetailFromUserView,
 )
 from .personal_info import PersonalInfoViewSet, SocialAccountViewSet
+from .account_completion import AccountCompletionView
 
 __all__ = [
-    # user_profile.py
     "UserProfileView",
     "UserBusinessesListView",
     "BusinessDetailFromUserView",
-    # personal_info.py
     "PersonalInfoViewSet",
     "SocialAccountViewSet",
+    "AccountCompletionView",
 ]

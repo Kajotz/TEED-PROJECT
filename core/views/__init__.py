@@ -1,8 +1,7 @@
-from .auth import GoogleAuthView
-from .test_views import hello, test_api
-
-# Auth Views
+# Auth views
 from .auth import (
+    GoogleAuthView,
+    FacebookAuthView,
     EmailTokenObtainPairView,
     PhoneOTPLoginView,
     PhoneOTPVerifyView,
@@ -13,24 +12,26 @@ from .auth import (
     PasswordRecoveryVerifyIdentityView,
     PasswordRecoveryResetView,
     CustomRegisterView,
-    SocialAuthCallbackView,
-    SocialAuthErrorView,
     EmailVerificationView,
     AccountRecoveryView,
     RecoveryContactView,
     DebugVerificationView,
+    PostAuthStateView,
+    hello,
+    test_api,
 )
 
-# Profile Views
+# Profile views
 from .profile import (
     UserProfileView,
     UserBusinessesListView,
     BusinessDetailFromUserView,
     PersonalInfoViewSet,
     SocialAccountViewSet,
+    AccountCompletionView,
 )
 
-# Business Views
+# Business views
 from .business import (
     BusinessCreateView,
     BusinessListView,
@@ -42,12 +43,26 @@ from .business import (
     SwitchActiveBusinessView,
 )
 
+#sales views
+
+from core.views.sales.inventory import (
+    InventorySummaryView,
+    ProductDetailView,
+    ProductListCreateView,
+    ProductStockAdjustmentListView,
+    ProductUnitDetailView,
+    ProductUnitListCreateView,
+    StockAdjustmentCreateView,
+)
+
 __all__ = [
-    # Test views
+    # test
     "hello",
     "test_api",
-    # Auth views
+
+    # auth
     "GoogleAuthView",
+    "FacebookAuthView",
     "EmailTokenObtainPairView",
     "PhoneOTPLoginView",
     "PhoneOTPVerifyView",
@@ -58,19 +73,21 @@ __all__ = [
     "PasswordRecoveryVerifyIdentityView",
     "PasswordRecoveryResetView",
     "CustomRegisterView",
-    "SocialAuthCallbackView",
-    "SocialAuthErrorView",
     "EmailVerificationView",
     "AccountRecoveryView",
     "RecoveryContactView",
     "DebugVerificationView",
-    # Profile views
+    "PostAuthStateView",
+
+    # profile
     "UserProfileView",
     "UserBusinessesListView",
     "BusinessDetailFromUserView",
     "PersonalInfoViewSet",
     "SocialAccountViewSet",
-    # Business views
+    "AccountCompletionView",
+
+    # business
     "BusinessCreateView",
     "BusinessListView",
     "BusinessDetailView",
@@ -79,4 +96,14 @@ __all__ = [
     "BusinessSettingsView",
     "BusinessProfileAPIView",
     "SwitchActiveBusinessView",
+
+#sales views
+    "InventorySummaryView",
+    "ProductDetailView",
+    "ProductListCreateView",
+    "ProductStockAdjustmentListView",
+    "ProductUnitDetailView",
+    "ProductUnitListCreateView",
+    "StockAdjustmentCreateView",
+
 ]

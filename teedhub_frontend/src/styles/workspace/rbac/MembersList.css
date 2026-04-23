@@ -1,0 +1,259 @@
+.members-list-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.members-hero-actions {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+
+.members-hero-actions__item {
+  display: flex;
+  flex: 0 0 170px;
+}
+
+.members-hero-actions__button {
+  width: 100%;
+  min-height: 44px;
+  height: 44px;
+  justify-content: center;
+}
+
+.member-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  padding: 20px 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.member-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.member-card__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.member-card__name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1f2937;
+  letter-spacing: -0.015em;
+  word-break: break-word;
+}
+
+.member-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.member-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.member-card__badge--role {
+  background: #f8fafc;
+  color: #4b5563;
+}
+
+.member-card__badge--status.is-active {
+  background: rgba(31, 117, 254, 0.08);
+  border-color: rgba(31, 117, 254, 0.12);
+  color: #1f75fe;
+}
+
+.member-card__badge--status.is-inactive {
+  background: #f8fafc;
+  color: #6b7280;
+}
+
+.member-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.member-card__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.member-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.member-card__value {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.member-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.member-card__actions > span {
+  display: inline-flex;
+}
+
+.member-card__actions .btn,
+.member-card__actions button {
+  min-height: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-card__actions > span > * {
+  min-height: 40px;
+  height: 40px;
+}
+
+.dark .member-card {
+  background: linear-gradient(180deg, #1b1b1b 0%, #171717 100%);
+  border-color: #323232;
+  box-shadow: none;
+}
+
+.dark .member-card__name {
+  color: #e5e7eb;
+}
+
+.dark .member-card__badge {
+  border-color: #323232;
+}
+
+.dark .member-card__badge--role {
+  background: #202020;
+  color: #d1d5db;
+}
+
+.dark .member-card__badge--status.is-active {
+  background: rgba(31, 117, 254, 0.14);
+  border-color: rgba(31, 117, 254, 0.22);
+  color: #60a5fa;
+}
+
+.dark .member-card__badge--status.is-inactive {
+  background: #202020;
+  color: #9ca3af;
+}
+
+.dark .member-card__field {
+  background: #181818;
+  border-color: #2b2b2b;
+}
+
+.dark .member-card__label {
+  color: #9ca3af;
+}
+
+.dark .member-card__value {
+  color: #e5e7eb;
+}
+
+@media (max-width: 767px) {
+  .member-card {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .member-card__top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .member-card__badges {
+    justify-content: flex-start;
+  }
+
+  .member-card__actions {
+    gap: 8px;
+  }
+
+  .member-card__actions > span {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .member-card__actions > span > * {
+    width: 100%;
+  }
+
+  .members-hero-actions {
+    justify-content: stretch;
+    gap: 10px;
+  }
+
+  .members-hero-actions__item {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .members-hero-actions__button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .member-card__actions > span {
+    flex: 1 1 100%;
+  }
+
+  .members-hero-actions {
+    flex-direction: row;
+  }
+
+  .members-hero-actions__item {
+    flex: 1 1 0;
+  }
+}

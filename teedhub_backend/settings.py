@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +11,15 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 SECRET_KEY = env("SECRET_KEY", default="django-insecure-your-secret-key-here")
 DEBUG = env.bool("DEBUG", default=True)
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "testserver"])
+
+ALLOWED_HOSTS = env.list(
+    "ALLOWED_HOSTS",
+    default=[
+        "localhost",
+        "127.0.0.1",
+        "testserver",
+    ],
+)
 
 REST_USE_JWT = True
 
@@ -22,7 +31,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
-
     # Allauth
     "allauth",
     "allauth.account",
@@ -30,28 +38,26 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.facebook",
     "allauth.socialaccount.providers.apple",
-
     # Third-party
+    "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
     "rest_framework_simplejwt",
-    "corsheaders",
     "dj_rest_auth",
     "dj_rest_auth.registration",
-
     # Local apps
     "core.apps.CoreConfig",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "teedhub_backend.middleware.CSRFExemptAPIMiddleware",
     "teedhub_backend.middleware.CORPHeaderMiddleware",
@@ -115,19 +121,32 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "profile_images")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+AUTH_USER_MODEL = "core.User"
 SITE_ID = 1
 
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
     default=[
         "http://localhost:5173",
-        "http://localhost:3000",
         "http://127.0.0.1:5173",
+        "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
 )
 
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -146,50 +165,41 @@ REST_FRAMEWORK = {
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
-            "secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+            "client_id": env("GOOGLE_CLIENT_ID", default=""),
+            "secret": env("GOOGLE_CLIENT_SECRET", default=""),
             "key": "",
         },
-        "SCOPE": [
-            "profile",
-            "email",
-        ],
+        "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {
             "access_type": "online",
         },
     },
     "facebook": {
         "APP": {
-            "client_id": os.getenv("FACEBOOK_CLIENT_ID", ""),
-            "secret": os.getenv("FACEBOOK_CLIENT_SECRET", ""),
+            "client_id": env("FACEBOOK_CLIENT_ID", default=""),
+            "secret": env("FACEBOOK_CLIENT_SECRET", default=""),
             "key": "",
         },
         "METHOD": "oauth2",
-        "SCOPE": [
-            "email",
-            "public_profile",
-        ],
+        "SCOPE": ["email", "public_profile"],
         "VERIFIED_EMAIL": False,
     },
     "apple": {
         "APP": {
-            "client_id": os.getenv("APPLE_CLIENT_ID", "com.example.teedhub"),
-            "secret": os.getenv("APPLE_SECRET", ""),
-            "key": os.getenv("APPLE_KEY_ID", ""),
+            "client_id": env("APPLE_CLIENT_ID", default="com.example.teedhub"),
+            "secret": env("APPLE_SECRET", default=""),
+            "key": env("APPLE_KEY_ID", default=""),
         },
-        "SCOPE": [
-            "email",
-            "name",
-        ],
+        "SCOPE": ["email", "name"],
         "AUTH_PARAMS": {
             "response_type": "code id_token",
             "response_mode": "form_post",
         },
         "SETTINGS": {
             "VERIFIED_EMAIL": True,
-            "APP_ID": os.getenv("APPLE_APP_ID", "com.example.teedhub"),
-            "TEAM_ID": os.getenv("APPLE_TEAM_ID", ""),
-            "KEY_ID": os.getenv("APPLE_KEY_ID", ""),
+            "APP_ID": env("APPLE_APP_ID", default="com.example.teedhub"),
+            "TEAM_ID": env("APPLE_TEAM_ID", default=""),
+            "KEY_ID": env("APPLE_KEY_ID", default=""),
         },
     },
 }
@@ -220,15 +230,19 @@ REST_AUTH = {
 }
 
 if IS_MOBILE_API:
-    REST_AUTH.update({
-        "JWT_AUTH_COOKIE": None,
-        "JWT_AUTH_REFRESH_COOKIE": None,
-    })
+    REST_AUTH.update(
+        {
+            "JWT_AUTH_COOKIE": None,
+            "JWT_AUTH_REFRESH_COOKIE": None,
+        }
+    )
 else:
-    REST_AUTH.update({
-        "JWT_AUTH_COOKIE": "access_token",
-        "JWT_AUTH_REFRESH_COOKIE": "refresh_token",
-    })
+    REST_AUTH.update(
+        {
+            "JWT_AUTH_COOKIE": "access_token",
+            "JWT_AUTH_REFRESH_COOKIE": "refresh_token",
+        }
+    )
 
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
@@ -240,59 +254,40 @@ ACCOUNT_RATE_LIMITS = {
     "login_failed": "5/5m",
 }
 
-EMAIL_BACKEND = env(
-    "EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend"
-)
+# =========================
+# EMAIL CONFIG - BREVO SMTP
+# =========================
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp-relay.brevo.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
 
-GMAIL_HOST = "smtp.gmail.com"
-GMAIL_PORT = 587
-GMAIL_USE_TLS = True
+# Brevo SMTP login + key
+EMAIL_HOST_USER = env("BREVO_SMTP_LOGIN", default="a7338f001@smtp-brevo.com")
+EMAIL_HOST_PASSWORD = env("BREVO_SMTP_KEY", default="")
 
-APPLE_HOST = "smtp.mail.icloud.com"
-APPLE_PORT = 587
-APPLE_USE_TLS = True
+# Sender must be verified in Brevo
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Renatusmm@gmail.com")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_SUBJECT_PREFIX = env("EMAIL_SUBJECT_PREFIX", default="[TeedHub] ")
 
-SENDGRID_API_KEY = env("SENDGRID_API_KEY", default="")
-MAILGUN_API_KEY = env("MAILGUN_API_KEY", default="")
-MAILGUN_DOMAIN = env("MAILGUN_DOMAIN", default="")
-
-EMAIL_PROVIDER = env("EMAIL_PROVIDER", default="console")
-
-if EMAIL_PROVIDER == "gmail":
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = GMAIL_HOST
-    EMAIL_PORT = GMAIL_PORT
-    EMAIL_USE_TLS = GMAIL_USE_TLS
-    EMAIL_HOST_USER = env("GMAIL_EMAIL", default="")
-    EMAIL_HOST_PASSWORD = env("GMAIL_APP_PASSWORD", default="")
-
-elif EMAIL_PROVIDER == "apple":
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = APPLE_HOST
-    EMAIL_PORT = APPLE_PORT
-    EMAIL_USE_TLS = APPLE_USE_TLS
-    EMAIL_HOST_USER = env("APPLE_EMAIL", default="")
-    EMAIL_HOST_PASSWORD = env("APPLE_APP_PASSWORD", default="")
-
-elif EMAIL_PROVIDER == "sendgrid":
-    EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
-    SENDGRID_API_KEY = env("SENDGRID_API_KEY", default="")
-
-elif EMAIL_PROVIDER == "mailgun":
-    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-    ANYMAIL = {
-        "MAILGUN_API_KEY": env("MAILGUN_API_KEY", default=""),
-    }
-
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@teedhub.app")
-
-EMAIL_VERIFICATION_TIMEOUT = env.int("EMAIL_VERIFICATION_TIMEOUT", default=24)
+# Verification / recovery config
+EMAIL_VERIFICATION_TIMEOUT = env.int("EMAIL_VERIFICATION_TIMEOUT", default=10)
 MAX_VERIFICATION_ATTEMPTS = env.int("MAX_VERIFICATION_ATTEMPTS", default=5)
 MAX_RECOVERY_ATTEMPTS = env.int("MAX_RECOVERY_ATTEMPTS", default=5)
+
+# Phone OTP config
+PHONE_OTP_TIMEOUT = env.int("PHONE_OTP_TIMEOUT", default=600)
+PHONE_OTP_LENGTH = env.int("PHONE_OTP_LENGTH", default=6)
+PHONE_OTP_MAX_ATTEMPTS = env.int("PHONE_OTP_MAX_ATTEMPTS", default=5)
+
+# Brevo SMS config
+BREVO_API_KEY = env("BREVO_API_KEY", default="")
+USE_BREVO_SMS = env.bool("USE_BREVO_SMS", default=False)
+BREVO_SMS_SENDER = env("BREVO_SMS_SENDER", default="TeedHub")
+BREVO_SMS_TIMEOUT = env.int("BREVO_SMS_TIMEOUT", default=10)
 
 GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", default="")
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")

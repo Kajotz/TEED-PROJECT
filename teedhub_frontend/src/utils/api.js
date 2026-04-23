@@ -1,84 +1,118 @@
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL } from "./constants";
+import {
+  getAccessToken,
+  getRefreshToken,
+  setAuthTokens,
+  clearAuthTokens,
+} from "./auth";
 
-/**
- * Utility for making authenticated API calls with automatic token refresh
- */
-
-/**
- * Get the base URL without /api suffix
- */
-const getBaseUrl = () => {
-  return API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
+const normalizeBaseUrl = () => {
+  return API_BASE_URL.endsWith("/")
+    ? API_BASE_URL.slice(0, -1)
+    : API_BASE_URL;
 };
 
-/**
- * Refresh the access token using the refresh token
- */
+const buildApiUrl = (path) => {
+  const baseUrl = normalizeBaseUrl();
+
+  if (!path) {
+    throw new Error("API path is required");
+  }
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
+  if (!path.startsWith("/")) {
+    throw new Error(`API path must start with "/": received "${path}"`);
+  }
+
+  return `${baseUrl}${path}`;
+};
+
+export class AuthError extends Error {
+  constructor(message = "Authentication failed") {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+const handleAuthFailure = (message) => {
+  clearAuthTokens();
+  throw new AuthError(message);
+};
+
+const parseJsonSafely = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    const rawText = await response.text();
+    throw new Error(
+      `Expected JSON response, got "${contentType}". Response starts with: ${rawText.slice(0, 200)}`
+    );
+  }
+
+  return response.json();
+};
+
 const refreshAccessToken = async () => {
-  try {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
+  const refreshToken = getRefreshToken();
 
-    const baseUrl = getBaseUrl();
-    const response = await fetch(`${baseUrl}/api/auth/token/refresh/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        refresh: refreshToken,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Token refresh failed');
-    }
-
-    const data = await response.json();
-    
-    if (data.access) {
-      localStorage.setItem('access_token', data.access);
-      return data.access;
-    }
-    
-    throw new Error('No access token in refresh response');
-  } catch (err) {
-    console.error('Token refresh error:', err);
-    // Clear auth and redirect to login
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    window.location.href = '/login';
-    throw err;
+  if (!refreshToken) {
+    handleAuthFailure("No refresh token available");
   }
+
+  const response = await fetch(buildApiUrl("/api/auth/token/refresh/"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
+
+  if (!response.ok) {
+    handleAuthFailure(`Token refresh failed: ${response.status}`);
+  }
+
+  const data = await parseJsonSafely(response);
+
+  if (!data.access) {
+    handleAuthFailure("No access token in refresh response");
+  }
+
+  setAuthTokens({ access: data.access, refresh: refreshToken });
+  return data.access;
 };
 
-/**
- * Make an authenticated API call with automatic token refresh on 401
- */
-export const fetchWithAuth = async (url, options = {}) => {
-  let token = localStorage.getItem('access_token');
-  
-  if (!token) {
-    console.error('No authentication token found in localStorage');
-    console.log('Available localStorage keys:', Object.keys(localStorage));
-    window.location.href = '/login';
-    throw new Error('No authentication token available');
+const prepareBody = (data) => {
+  if (data === undefined || data === null) {
+    return undefined;
   }
 
-  console.log('Using token:', token.substring(0, 20) + '...');
+  if (data instanceof FormData) {
+    return data;
+  }
+
+  return JSON.stringify(data);
+};
+
+export const fetchWithAuth = async (path, options = {}) => {
+  let token = getAccessToken();
+
+  if (!token) {
+    handleAuthFailure("No authentication token available");
+  }
+
+  const url = buildApiUrl(path);
 
   const headers = {
-    ...options.headers,
+    ...(options.headers || {}),
   };
 
-  // Only set Content-Type if body is not FormData
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
+  if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
   }
 
-  // Make initial request with current token
   let response = await fetch(url, {
     ...options,
     headers: {
@@ -87,63 +121,47 @@ export const fetchWithAuth = async (url, options = {}) => {
     },
   });
 
-  console.log(`Request to ${url} returned status: ${response.status}`);
-
-  // If 401 Unauthorized, try to refresh token and retry once
   if (response.status === 401) {
-    console.log('Received 401, attempting to refresh token...');
-    try {
-      token = await refreshAccessToken();
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          ...headers,
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      console.log(`Retry request to ${url} returned status: ${response.status}`);
-    } catch (err) {
-      throw err;
+    token = await refreshAccessToken();
+
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 401) {
+      handleAuthFailure("Authentication failed after token refresh");
     }
   }
 
   return response;
 };
 
-/**
- * Make a simple authenticated GET request
- */
-export const apiGet = (url) => {
-  return fetchWithAuth(url, {
-    method: 'GET',
+export const apiGet = (path, options = {}) =>
+  fetchWithAuth(path, {
+    method: "GET",
+    ...options,
   });
-};
 
-/**
- * Make a simple authenticated POST request
- */
-export const apiPost = (url, data) => {
-  return fetchWithAuth(url, {
-    method: 'POST',
-    body: JSON.stringify(data),
+export const apiPost = (path, data, options = {}) =>
+  fetchWithAuth(path, {
+    method: "POST",
+    body: prepareBody(data),
+    ...options,
   });
-};
 
-/**
- * Make a simple authenticated PATCH request
- */
-export const apiPatch = (url, data) => {
-  return fetchWithAuth(url, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
+export const apiPatch = (path, data, options = {}) =>
+  fetchWithAuth(path, {
+    method: "PATCH",
+    body: prepareBody(data),
+    ...options,
   });
-};
 
-/**
- * Make a simple authenticated DELETE request
- */
-export const apiDelete = (url) => {
-  return fetchWithAuth(url, {
-    method: 'DELETE',
+export const apiDelete = (path, options = {}) =>
+  fetchWithAuth(path, {
+    method: "DELETE",
+    ...options,
   });
-};

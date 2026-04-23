@@ -1,20 +1,23 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './i18n' // Import i18n configuration
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./i18n/index.js";
 
-// Import shadcn globals and other styles
-import './styles/globals.css'
-import './index.css'
+import "./styles/globals.css";
+import "./index.css";
 
-import App from './App.jsx'
+import App from "./App.jsx";
+import { ThemeProvider } from "@/components/ui/theme/ThemeProvider";
+import { AppToastProvider } from "@/components/ui/toast/AppToastProvider";
 
-import './i18n' // Import i18n configuration
-
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <AppToastProvider>
+        <App />
+      </AppToastProvider>
+    </ThemeProvider>
   </StrictMode>
-)
+);
 
 console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
 console.log("VITE_NODE_ENV:", import.meta.env.VITE_NODE_ENV);

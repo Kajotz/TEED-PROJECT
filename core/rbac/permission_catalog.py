@@ -31,4 +31,9 @@ PERMISSION_CATALOG = {
         ("business_profile.view", "View business profile"),
         ("business_profile.update", "Update business profile"),
     ],
+    "inventory": [
+        ("inventory.view", "View inventory"),
+        ("inventory.create", "Create inventory items"),
+        ("inventory.update", "Update inventory items"),
+    ],
 }

@@ -1,0 +1,121 @@
+.home-shared-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-shared-shell__left-surface {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 56%;
+  background: #ffffff;
+  z-index: 0;
+  transition: background-color 300ms ease;
+}
+
+.dark .home-shared-shell__left-surface {
+  background: #1a1a1a;
+}
+
+.home-shared-shell__canvas-surface {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 44%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  /* Canvas starts at 44% of viewport; left-surface ends at 56%.
+     Diagonal top-left must sit at 56% viewport = (56-44)/56 * 100% ≈ 21.4% of this element's width.
+     Bottom-left stays at 0% so the seam fans out correctly. */
+  clip-path: polygon(21.4% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.home-shared-shell__canvas-surface canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.home-shared-shell__seam {
+  display: none;
+}
+
+.home-shared-shell__content {
+  position: relative;
+  z-index: 2;
+}
+
+.home-page-shell {
+  --home-inline-padding: 1.25rem;
+  --home-section-gap: 0.875rem;
+  --home-header-top: 1rem;
+  --home-header-bottom: 0.35rem;
+  --home-section-y: 0;
+}
+
+.home-page-shell__section {
+  padding-left: var(--home-inline-padding);
+  padding-right: var(--home-inline-padding);
+}
+
+.home-page-shell__section--header {
+  padding-top: var(--home-header-top);
+  padding-bottom: var(--home-header-bottom);
+}
+
+.home-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--home-section-gap);
+  padding-top: 0;
+}
+
+.home-page-shell__section--hero,
+.home-page-shell__section--platforms {
+  padding-top: var(--home-section-y);
+  padding-bottom: var(--home-section-y);
+}
+
+@media (min-width: 640px) {
+  .home-page-shell {
+    --home-inline-padding: 2rem;
+    --home-section-gap: 1.1rem;
+    --home-header-top: 1.25rem;
+    --home-header-bottom: 0.5rem;
+    --home-section-y: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page-shell {
+    --home-inline-padding: 3rem;
+    --home-section-gap: 1.35rem;
+    --home-header-top: 1.5rem;
+    --home-header-bottom: 0.6rem;
+    --home-section-y: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .home-page-shell {
+    --home-inline-padding: 4rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .home-shared-shell__left-surface,
+  .home-shared-shell__canvas-surface {
+    inset: 0;
+    width: 100%;
+    clip-path: none;
+  }
+
+  .home-shared-shell__left-surface {
+    background: transparent;
+  }
+
+  .dark .home-shared-shell__left-surface {
+    background: transparent;
+  }
+}

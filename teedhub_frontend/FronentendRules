@@ -1,0 +1,173 @@
+TEED Frontend Design Rules
+1. Core design direction
+The UI must feel clean, premium, calm, and structured.
+The visual direction is inspired by Stripe-level polish, not by flashy startup clones.
+Every page must prioritize clarity, spacing, hierarchy, and restraint over decoration.
+Do not add visual effects unless they improve depth and focus.
+Avoid noisy interfaces, crowded layouts, oversized shadows, and unnecessary gradients.
+2. Brand colors
+Primary brand color: #1F75FE
+Accent color: #f2a705
+Dark background base: #1E1E1E
+Dark text color: #D4D4D4
+
+Rules:
+
+Use the primary blue for main actions, highlights, links, focus states, and key accents.
+Use the yellow accent sparingly for emphasis only.
+Do not let the yellow overpower the interface.
+Do not introduce random extra brand colors.
+Keep the palette disciplined and minimal.
+3. Overall visual style
+Use soft depth, smooth curves, and subtle layering.
+Prefer rounded corners, especially rounded-2xl, rounded-[24px], or rounded-full where appropriate.
+Use light shadows, never harsh shadows.
+Use soft borders with low contrast.
+Use blurred blob backgrounds or soft gradient glows only as supporting visuals, never as the main content.
+Background effects must stay behind content and must never reduce readability.
+4. Layout rules
+Layout must feel spacious and balanced.
+Prefer clear sections with strong separation.
+Use consistent horizontal padding and vertical rhythm.
+Avoid cramped designs.
+Use max width containers such as max-w-6xl, max-w-7xl, max-w-xl, etc depending on the section.
+Prefer grid and flex layouts that scale cleanly across screen sizes.
+Mobile-first design is mandatory.
+Desktop layouts should feel elegant, not stretched or empty.
+5. Typography rules
+Typography must be clean and restrained.
+Headings should feel confident and compact, not oversized for no reason.
+Body text should be highly readable and never too light or too small.
+Maintain clear hierarchy:
+large heading
+supporting subheading
+body text
+labels and helper text
+Avoid decorative fonts.
+Use font weight and spacing for hierarchy instead of random color changes.
+6. Button rules
+Buttons must feel Stripe-inspired: compact, smooth, premium, and controlled.
+Primary buttons use the brand blue.
+Secondary buttons use neutral surfaces with subtle borders.
+Accent buttons use yellow only when emphasis is truly needed.
+Use rounded-full or soft rounded buttons consistently.
+Hover states must be subtle:
+slight shadow increase
+slight lift
+no dramatic scale jumps
+Disabled states must be obvious but still clean.
+Do not use giant gradients, neon glows, or over-animated buttons.
+7. Input and form rules
+Inputs must feel soft, modern, and easy to scan.
+Use rounded corners and subtle borders.
+Use clear labels above inputs.
+Error states must be clean and visible, never aggressive.
+Focus states must use soft blue glow/ring based on #1F75FE.
+Forms must have strong spacing between fields.
+Avoid clutter around inputs.
+Form sections should often live inside soft cards or clean containers.
+8. Card rules
+Cards must feel elevated but not heavy.
+Use soft shadows and low-contrast borders.
+Prefer large rounded corners.
+Card content must have generous padding.
+Cards should separate information clearly.
+Do not stack too many nested cards unless absolutely needed.
+Cards must not look like Bootstrap leftovers.
+9. Motion and animation rules
+Motion must be smooth, subtle, and purposeful.
+Use animation to support hierarchy, focus, and premium feel.
+Good motion examples:
+soft fade-in
+slight upward entrance
+slow blob drifting
+subtle hover lift
+gentle opacity transitions
+Bad motion examples:
+bouncing
+spinning panels
+exaggerated scaling
+flashy hero gimmicks
+Motion should never distract from content.
+Prefer transition-all duration-200 or duration-300 for standard interactions.
+Use Framer Motion only where it adds real polish.
+10. Blob and background effect rules
+Blob visuals should be soft, abstract, blurred, and low-opacity.
+Use blob effects mainly in hero sections, auth pages, onboarding pages, and premium highlights.
+Prefer CSS gradients, blurred circles, layered glow shapes, or SVG blobs before using heavy libraries.
+Blob effects must not dominate the page.
+Keep them ambient, not loud.
+Avoid sharp-edged random shapes pretending to be blobs.
+11. Stripe-like style rules
+
+To match the Stripe feel:
+
+prioritize whitespace
+use strong but minimal hierarchy
+keep sections clean
+use soft gradients and blur carefully
+make CTAs feel intentional
+maintain visual precision
+use restrained premium styling instead of overdesign
+
+Do not:
+
+overuse glassmorphism
+add too many colors
+add unnecessary icons everywhere
+use loud shadows
+force futuristic effects
+make everything look like a crypto landing page
+12. Dark mode rules
+Dark mode must feel deliberate, not inverted lazily.
+Use #1E1E1E as a main dark surface reference.
+Text in dark mode should be readable and calm, such as #D4D4D4.
+Borders should stay subtle, not bright gray.
+Shadows in dark mode should remain soft.
+Primary blue and accent yellow should still work cleanly in dark mode.
+Do not let dark mode become muddy or overly blue-tinted.
+13. Component consistency rules
+Reuse global UI components whenever possible.
+Use shared:
+Button
+Input
+Card
+Section wrapper
+Form layout patterns
+Do not reinvent component styles in each page.
+All components must follow the same radius, spacing, shadow, and transition language.
+Avoid one-off styling unless absolutely necessary.
+14. Spacing rules
+Spacing must feel intentional and consistent.
+Prefer generous spacing between sections and components.
+Keep internal card padding consistent.
+Avoid random margin values unless there is a real reason.
+Visual rhythm matters as much as color.
+15. Code style rules for frontend
+Use React functional components.
+Use Tailwind utility classes cleanly and consistently.
+Keep JSX readable and structured.
+Extract reusable UI pieces instead of repeating large style blocks.
+Prefer maintainable code over clever hacks.
+Do not inline giant style messes unless unavoidable.
+Respect existing project structure and naming.
+16. What Copilot must avoid
+Do not generate generic Bootstrap-looking UI
+Do not generate cluttered enterprise dashboard styling
+Do not use too many colors
+Do not use harsh borders
+Do not use strong glassmorphism everywhere
+Do not use random gradients on every section
+Do not use exaggerated animation
+Do not make components inconsistent with the global design system
+Do not create visual noise
+17. What Copilot should optimize for
+premium simplicity
+visual restraint
+consistency
+reusable components
+responsive balance
+elegant hierarchy
+clean dark mode
+subtle motion
+Stripe-inspired polish without copying Stripe blindly

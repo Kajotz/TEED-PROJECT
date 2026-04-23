@@ -1,0 +1,91 @@
+/* =========================
+   LEFT SECTION
+   ========================= */
+
+.complete-left {
+  max-width: 440px;
+  padding-top: 8px;
+}
+
+.complete-title {
+  font-size: 28px; /* smaller than before */
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.complete-features {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.complete-feature {
+  display: flex;
+  gap: 12px;
+}
+
+.complete-dot {
+  margin-top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #1f75fe;
+}
+
+.complete-feature-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.complete-feature-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+/* =========================
+   RECHECK BUTTON
+   ========================= */
+
+.recheck-btn {
+  min-height: 52px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease;
+}
+
+.recheck-btn:hover {
+  background: #f9fafb;
+}
+
+/* =========================
+   DARK MODE
+   ========================= */
+
+.dark .complete-title {
+  color: #f9fafb;
+}
+
+.dark .complete-feature-title {
+  color: #f3f4f6;
+}
+
+.dark .complete-feature-text {
+  color: #9ca3af;
+}
+
+.dark .recheck-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f9fafb;
+}
+
+.dark .recheck-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

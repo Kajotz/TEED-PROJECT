@@ -1,4 +1,5 @@
 cd .\teedhub_frontend; npx tailwindcss -c tailwind.config.js -i src/assets/input.css -o src/assets/main.css --watch
+
 Set-Content -Path .\.env -Value "VITE_API_URL=http://127.0.0.1:8000/api" (env creation)
 4403530021967840, 06/28
 
@@ -37,3 +38,22 @@ for user in superusers:
     $env:Path += ";C:\Program Files\nodejs\"
 node -v
 npm -v
+
+
+[('kajo', 'kajo@teedhub.com')]
+
+python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); u = User.objects.get(username='kajo'); u.set_password('Mamayangu1'); u.save(); print('Password for kajo has been updated!')"
+
+
+member roles
+>>> member.permission_codes()
+['business.view', 'business.update', 'business.delete', 'business.switch', 'members.view', 'members.invite', 'members.update', 'members.remove', 'roles.view', 'roles.create', 'roles.update', 'roles.delete', 'roles.assign', 'analytics.view', 'social_accounts.view', 'social_accounts.manage', 'business_profile.view', 'business_profile.update']
+
+
+Get-ChildItem -Recurse | Select-String -Pattern
+
+Remove-Item -Path "db.sqlite3"
+del db.sqlite3
+
+
+npx @tailwindcss/cli -i ./src/assets/input.css -o ./src/assets/main.css --watch

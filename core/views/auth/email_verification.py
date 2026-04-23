@@ -1,517 +1,580 @@
-"""
-Email verification and account recovery views
-Handles email verification during signup and account recovery flows
-"""
+import logging
+import re
 
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.contrib.auth.models import User
-from django.utils import timezone
-from datetime import timedelta
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import EmailVerification, AccountRecoveryCode, RecoveryContact
-from core.serializers import (
-    EmailVerificationSerializer, EmailVerificationConfirmSerializer,
-    AccountRecoveryCodeSerializer, RecoveryContactSerializer,
-    AccountRecoverySerializer
+from core.models import (
+    BackupRecoveryCode,
+    EmailVerification,
+    RecoveryChallenge,
+    RecoveryMethod,
 )
+from core.services.account_state import ensure_account_baseline, get_post_auth_state
 from core.utils.email_service import EmailService
-import logging
 
+User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+def normalize_email(value):
+    return (value or "").strip().lower()
+
+
+def normalize_phone(value):
+    return re.sub(r"\D", "", value or "")
+
+
 class EmailVerificationView(APIView):
-    """
-    Handle email verification during signup
-    POST /api/auth/email-verification/send/ - Send verification code
-    POST /api/auth/email-verification/verify/ - Verify email with code
-    """
-    
     permission_classes = [permissions.AllowAny]
-    
+
     def post(self, request):
-        """Send verification code to email"""
-        
-        action = request.data.get('action')
-        
-        if action == 'send':
+        action = request.data.get("action")
+
+        if action == "send":
             return self._send_verification_code(request)
-        elif action == 'verify':
+        if action == "verify":
             return self._verify_email(request)
-        else:
-            return Response(
-                {'error': 'Invalid action. Use "send" or "verify".'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
+
+        return Response(
+            {"error": 'Invalid action. Use "send" or "verify".'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     def _send_verification_code(self, request):
-        """Send verification code to email"""
-        serializer = EmailVerificationSerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        email = normalize_email(request.data.get("email"))
+
+        if not email:
             return Response(
-                {'errors': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Email is required."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        email = serializer.validated_data['email']
-        
+
         try:
-            # Create verification record
             verification = EmailVerification.create_for_email(email)
-            
-            # Send email
+
             email_sent = EmailService.send_verification_code(
                 email,
-                verification.verification_code
+                verification.verification_code,
             )
-            
+
             if not email_sent:
                 return Response(
-                    {'error': 'Failed to send verification email. Try again later.'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    {"error": "Failed to send verification email. Try again later."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-            
-            return Response(
-                {
-                    'message': f'Verification code sent to {email}',
-                    'email': email,
-                    'expires_in': 24 * 60 * 60  # 24 hours in seconds
-                },
-                status=status.HTTP_200_OK
-            )
-            
+
+            response_data = {
+                "message": f"Verification code sent to {email}",
+                "email": email,
+                "expires_in": 24 * 60 * 60,
+            }
+
+            if settings.DEBUG:
+                response_data["dev_code"] = verification.verification_code
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
         except Exception as e:
-            logger.error(f"Error sending verification code: {str(e)}")
+            logger.error("Error sending verification code: %s", str(e))
             return Response(
-                {'error': 'Failed to process request.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to process request."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
+
     def _verify_email(self, request):
-        """Verify email with verification code"""
-        serializer = EmailVerificationConfirmSerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        email = normalize_email(request.data.get("email"))
+        code = (request.data.get("verification_code") or "").strip()
+
+        if not email or not code:
             return Response(
-                {'errors': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Email and verification_code are required."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        email = serializer.validated_data['email']
-        code = serializer.validated_data['verification_code']
-        
-        try:
-            # Find verification record
-            verification = EmailVerification.objects.filter(
+
+        verification = (
+            EmailVerification.objects.filter(
                 email=email,
                 verification_code=code,
-                is_verified=False
-            ).first()
-            
-            if not verification:
-                return Response(
-                    {'error': 'Invalid verification code.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Check if expired
-            if verification.is_expired():
-                return Response(
-                    {'error': 'Verification code has expired. Request a new one.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Check attempts
-            if verification.attempts >= 5:
-                return Response(
-                    {'error': 'Too many failed attempts. Request a new code.'},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS
-                )
-            
-            # Mark as verified
+                is_verified=False,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not verification:
+            return Response(
+                {"error": "Invalid verification code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if verification.is_expired():
+            return Response(
+                {"error": "Verification code has expired. Request a new code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if verification.attempts >= 5:
+            return Response(
+                {"error": "Too many failed attempts. Request a new code."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        try:
             verification.is_verified = True
             verification.verified_at = timezone.now()
-            verification.save()
-            
-            # Update user profile if user exists (for standalone verification)
-            from django.contrib.auth.models import User
-            try:
-                user = User.objects.get(email=email)
-                profile = user.profile
-                profile.email_verified = True
-                profile.email_verified_at = timezone.now()
-                profile.save()
-                logger.info(f"Email verified and marked for user: {email}")
-            except User.DoesNotExist:
-                # User not created yet (verification sent before signup)
-                logger.info(f"Email verified but user not created yet: {email}")
-            
+            verification.save(update_fields=["is_verified", "verified_at"])
+
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response(
+                    {"error": "No account found for this email."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            _, identity_state = ensure_account_baseline(user)
+
+            if not identity_state.email_verified:
+                identity_state.email_verified = True
+                identity_state.email_verified_at = timezone.now()
+                identity_state.save(
+                    update_fields=["email_verified", "email_verified_at", "updated_at"]
+                )
+
+            refresh = RefreshToken.for_user(user)
+
             return Response(
                 {
-                    'message': 'Email verified successfully! You can now sign up.',
-                    'email': email,
-                    'verified_at': verification.verified_at,
-                    'next_step': 'complete_signup'
+                    "message": "Email verified successfully.",
+                    "email": email,
+                    "verified_at": verification.verified_at,
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "post_auth": get_post_auth_state(user),
                 },
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
-            
+
         except Exception as e:
-            logger.error(f"Error verifying email: {str(e)}")
-            # Increment attempts
-            try:
-                verification.attempts += 1
-                verification.save()
-            except:
-                pass
-            
-            return Response(
-                {'error': 'Failed to verify email.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )            # Increment attempts
+            logger.error("Error verifying email: %s", str(e))
             verification.attempts += 1
-            verification.save()
-            
+            verification.save(update_fields=["attempts"])
+
             return Response(
-                {'error': 'Failed to verify email.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to verify email."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
 class AccountRecoveryView(APIView):
     """
-    Handle account recovery using recovery codes
-    POST /api/auth/account-recovery/ - Recover account using recovery code
+    Backup code based account recovery.
+    Replaces old AccountRecoveryCode flow.
     """
-    
+
     permission_classes = [permissions.AllowAny]
-    
+
     def post(self, request):
-        """Recover account using recovery code"""
-        
-        serializer = AccountRecoverySerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        recovery_code = (request.data.get("recovery_code") or "").strip()
+        new_password = request.data.get("new_password") or ""
+
+        if not recovery_code or not new_password:
             return Response(
-                {'errors': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "recovery_code and new_password are required."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        recovery_code = serializer.validated_data['recovery_code']
-        new_password = serializer.validated_data['new_password']
-        
+
+        if len(new_password) < 8:
+            return Response(
+                {"error": "Password must be at least 8 characters long."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            # Hash the provided code
-            code_hash = AccountRecoveryCode.hash_code(recovery_code)
-            
-            # Find recovery code
-            recovery = AccountRecoveryCode.objects.filter(
+            code_hash = BackupRecoveryCode.hash_code(recovery_code)
+
+            recovery = BackupRecoveryCode.objects.filter(
                 code_hash=code_hash,
-                is_used=False
-            ).first()
-            
+                is_used=False,
+            ).select_related("user").first()
+
             if not recovery:
-                logger.warning(f"Invalid recovery code attempt: {recovery_code[:4]}***")
-                return Response(
-                    {'error': 'Invalid recovery code.'},
-                    status=status.HTTP_400_BAD_REQUEST
+                logger.warning(
+                    "Invalid backup recovery code attempt: %s***",
+                    recovery_code[:4],
                 )
-            
-            # Update user password
+                return Response(
+                    {"error": "Invalid recovery code."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             user = recovery.user
+            ensure_account_baseline(user)
+
             user.set_password(new_password)
             user.save()
-            
-            # Mark recovery code as used
+
             recovery.is_used = True
             recovery.used_at = timezone.now()
-            recovery.save()
-            
-            # Send notification
+            recovery.save(update_fields=["is_used", "used_at"])
+
             EmailService.send_account_recovery_notification(user)
-            
-            logger.info(f"Account recovery used for user: {user.username}")
-            
+
+            refresh = RefreshToken.for_user(user)
+
+            logger.info("Backup recovery used for user: %s", user.username)
+
             return Response(
                 {
-                    'message': 'Account recovered successfully! Please log in with your new password.',
-                    'redirect_to': '/login'
+                    "message": "Account recovered successfully.",
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "post_auth": get_post_auth_state(user),
                 },
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
-            
+
         except Exception as e:
-            logger.error(f"Error during account recovery: {str(e)}")
+            logger.error("Error during account recovery: %s", str(e))
             return Response(
-                {'error': 'Failed to recover account.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to recover account."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
 class RecoveryContactView(APIView):
     """
-    Manage recovery contacts (alternate email, phone)
-    GET /api/auth/recovery-contacts/ - Get user's recovery contacts
-    POST /api/auth/recovery-contacts/ - Add new recovery contact
-    PATCH /api/auth/recovery-contacts/{id}/ - Update recovery contact
-    DELETE /api/auth/recovery-contacts/{id}/ - Remove recovery contact
+    Compatibility class name kept to avoid breaking urls/imports.
+    Internally this now uses RecoveryMethod + RecoveryChallenge.
     """
-    
+
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get(self, request):
-        """Get user's recovery contacts"""
         try:
-            contacts = RecoveryContact.objects.filter(user=request.user)
-            data = []
-            
-            for contact in contacts:
-                data.append({
-                    'id': str(contact.id),
-                    'contact_type': contact.contact_type,
-                    'contact_value': self._mask_contact(contact.contact_value, contact.contact_type),
-                    'is_verified': contact.is_verified,
-                    'is_primary': contact.is_primary,
-                    'created_at': contact.created_at
-                })
-            
-            return Response(data, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"Error fetching recovery contacts: {str(e)}")
-            return Response(
-                {'error': 'Failed to fetch recovery contacts.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
-    def post(self, request):
-        """Add new recovery contact"""
-        serializer = RecoveryContactSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(
-                {'errors': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        contact_type = serializer.validated_data['contact_type']
-        contact_value = serializer.validated_data['contact_value']
-        
-        try:
-            # Check if contact already exists
-            existing = RecoveryContact.objects.filter(
+            methods = RecoveryMethod.objects.filter(
                 user=request.user,
-                contact_type=contact_type
-            ).first()
-            
-            if existing:
-                return Response(
-                    {'error': f'You already have a {contact_type} recovery contact.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Create contact
-            verification_code = RecoveryContact.generate_code()
-            contact = RecoveryContact.objects.create(
-                user=request.user,
-                contact_type=contact_type,
-                contact_value=contact_value,
-                verification_code=verification_code
-            )
-            
-            # Send verification code
-            EmailService.send_recovery_contact_verification(
-                contact_value,
-                verification_code,
-                contact_type
-            )
-            
-            return Response(
+                is_active=True,
+            ).order_by("-created_at")
+
+            data = [
                 {
-                    'message': f'Verification code sent to {contact_type}.',
-                    'id': str(contact.id),
-                    'contact_type': contact_type,
-                    'requires_verification': True
-                },
-                status=status.HTTP_201_CREATED
-            )
-            
+                    "id": str(method.id),
+                    "method_type": method.method_type,
+                    "value": method.masked_value,
+                    "is_verified": method.is_verified,
+                    "is_default": method.is_default,
+                    "created_at": method.created_at,
+                }
+                for method in methods
+            ]
+
+            return Response(data, status=status.HTTP_200_OK)
+
         except Exception as e:
-            logger.error(f"Error adding recovery contact: {str(e)}")
+            logger.error("Error fetching recovery methods: %s", str(e))
             return Response(
-                {'error': 'Failed to add recovery contact.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to fetch recovery methods."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
-    def patch(self, request, contact_id=None):
-        """Verify or update recovery contact"""
-        
-        action = request.data.get('action')
-        
-        if action == 'verify':
-            return self._verify_contact(request, contact_id)
-        elif action == 'set_primary':
-            return self._set_primary(request, contact_id)
-        else:
+
+    def post(self, request):
+        method_type = (request.data.get("method_type") or request.data.get("contact_type") or "").strip().lower()
+        raw_value = (request.data.get("value") or request.data.get("contact_value") or "").strip()
+
+        if method_type not in {RecoveryMethod.METHOD_EMAIL, RecoveryMethod.METHOD_PHONE}:
             return Response(
-                {'error': 'Invalid action.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "method_type must be email or phone."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-    
-    def _verify_contact(self, request, contact_id):
-        """Verify recovery contact with code"""
+
+        if not raw_value:
+            return Response(
+                {"error": "value is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        normalized_value = (
+            normalize_email(raw_value)
+            if method_type == RecoveryMethod.METHOD_EMAIL
+            else normalize_phone(raw_value)
+        )
+
+        if not normalized_value:
+            return Response(
+                {"error": "Invalid recovery method value."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            contact = RecoveryContact.objects.get(id=contact_id, user=request.user)
-            code = request.data.get('code')
-            
-            if contact.is_verified:
-                return Response(
-                    {'error': 'Contact already verified.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            if contact.verification_attempts >= 5:
-                return Response(
-                    {'error': 'Too many failed attempts.'},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS
-                )
-            
-            if contact.verification_code != code:
-                contact.verification_attempts += 1
-                contact.save()
-                return Response(
-                    {'error': 'Invalid verification code.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Mark as verified
-            contact.is_verified = True
-            contact.verified_at = timezone.now()
-            contact.verification_code = None
-            contact.save()
-            
-            return Response(
-                {'message': 'Recovery contact verified successfully.'},
-                status=status.HTTP_200_OK
-            )
-            
-        except RecoveryContact.DoesNotExist:
-            return Response(
-                {'error': 'Recovery contact not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-    
-    def _set_primary(self, request, contact_id):
-        """Set contact as primary recovery contact"""
-        try:
-            contact = RecoveryContact.objects.get(id=contact_id, user=request.user)
-            
-            if not contact.is_verified:
-                return Response(
-                    {'error': 'Contact must be verified first.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Unset other primary contacts
-            RecoveryContact.objects.filter(
+            method, created = RecoveryMethod.objects.get_or_create(
                 user=request.user,
-                is_primary=True
-            ).update(is_primary=False)
-            
-            # Set this as primary
-            contact.is_primary = True
-            contact.save()
-            
-            return Response(
-                {'message': 'Primary recovery contact updated.'},
-                status=status.HTTP_200_OK
+                method_type=method_type,
+                normalized_value=normalized_value,
+                defaults={
+                    "value": raw_value,
+                    "is_verified": False,
+                    "is_default": False,
+                    "is_active": True,
+                },
             )
-            
-        except RecoveryContact.DoesNotExist:
-            return Response(
-                {'error': 'Recovery contact not found.'},
-                status=status.HTTP_404_NOT_FOUND
+
+            if not created and method.is_verified:
+                return Response(
+                    {"error": f"This {method_type} recovery method already exists and is verified."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not created:
+                method.value = raw_value
+                method.is_active = True
+                method.save(update_fields=["value", "is_active", "updated_at"])
+
+            challenge = RecoveryChallenge.create_challenge(
+                user=request.user,
+                purpose=RecoveryChallenge.PURPOSE_ADD_RECOVERY_METHOD,
+                channel=method_type,
+                target_value=normalized_value,
+                target_display=method.masked_value,
+                recovery_method=method,
             )
-    
-    def delete(self, request, contact_id=None):
-        """Delete recovery contact"""
+
+            response_data = {
+                "message": f"Verification code sent to {method_type}.",
+                "id": str(method.id),
+                "method_type": method_type,
+                "requires_verification": True,
+            }
+
+            if method_type == RecoveryMethod.METHOD_EMAIL:
+                email_sent = EmailService.send_verification_code(
+                    normalized_value,
+                    challenge.plaintext_code,
+                )
+                if not email_sent:
+                    return Response(
+                        {"error": "Failed to send verification email."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+            else:
+                if settings.DEBUG:
+                    response_data["dev_code"] = challenge.plaintext_code
+                else:
+                    return Response(
+                        {"error": "Phone verification provider is not configured yet."},
+                        status=status.HTTP_501_NOT_IMPLEMENTED,
+                    )
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error("Error adding recovery method: %s", str(e))
+            return Response(
+                {"error": "Failed to add recovery method."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def patch(self, request, contact_id=None):
+        action = request.data.get("action")
+
+        if action == "verify":
+            return self._verify_method(request, contact_id)
+        if action == "set_primary":
+            return self._set_primary(request, contact_id)
+
+        return Response(
+            {"error": "Invalid action."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    def _verify_method(self, request, contact_id):
+        code = (request.data.get("code") or "").strip()
+        if not code:
+            return Response(
+                {"error": "Verification code is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            contact = RecoveryContact.objects.get(id=contact_id, user=request.user)
-            contact.delete()
-            
-            return Response(
-                {'message': 'Recovery contact removed.'},
-                status=status.HTTP_200_OK
+            method = RecoveryMethod.objects.get(id=contact_id, user=request.user, is_active=True)
+
+            if method.is_verified:
+                return Response(
+                    {"error": "Recovery method already verified."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            challenge = (
+                RecoveryChallenge.objects.filter(
+                    user=request.user,
+                    recovery_method=method,
+                    purpose=RecoveryChallenge.PURPOSE_ADD_RECOVERY_METHOD,
+                )
+                .order_by("-created_at")
+                .first()
             )
-            
-        except RecoveryContact.DoesNotExist:
-            return Response(
-                {'error': 'Recovery contact not found.'},
-                status=status.HTTP_404_NOT_FOUND
+
+            if not challenge:
+                return Response(
+                    {"error": "No verification challenge found for this method."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            challenge.mark_expired_if_needed()
+
+            if challenge.status != RecoveryChallenge.STATUS_PENDING:
+                return Response(
+                    {"error": "Verification challenge is no longer active."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if challenge.is_expired():
+                challenge.status = RecoveryChallenge.STATUS_EXPIRED
+                challenge.save(update_fields=["status"])
+                return Response(
+                    {"error": "Verification code has expired. Request a new one."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if challenge.attempts >= challenge.max_attempts:
+                return Response(
+                    {"error": "Too many failed attempts."},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+
+            if not challenge.verify_code(code):
+                challenge.attempts += 1
+                challenge.save(update_fields=["attempts"])
+                return Response(
+                    {"error": "Invalid verification code."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            now = timezone.now()
+
+            challenge.status = RecoveryChallenge.STATUS_VERIFIED
+            challenge.verified_at = now
+            challenge.completed_at = now
+            challenge.status = RecoveryChallenge.STATUS_COMPLETED
+            challenge.save(
+                update_fields=["status", "verified_at", "completed_at"]
             )
-    
-    @staticmethod
-    def _mask_contact(value, contact_type):
-        """Mask sensitive contact information"""
-        if contact_type == 'email':
-            parts = value.split('@')
-            visible = parts[0][:2] if len(parts[0]) > 2 else parts[0]
-            return f"{visible}***@{parts[1]}"
-        elif contact_type == 'phone':
-            return f"***{value[-4:]}"
-        return value
+
+            method.is_verified = True
+            method.verified_at = now
+            method.save(update_fields=["is_verified", "verified_at", "updated_at"])
+
+            return Response(
+                {"message": "Recovery method verified successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        except RecoveryMethod.DoesNotExist:
+            return Response(
+                {"error": "Recovery method not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def _set_primary(self, request, contact_id):
+        try:
+            method = RecoveryMethod.objects.get(id=contact_id, user=request.user, is_active=True)
+
+            if not method.is_verified:
+                return Response(
+                    {"error": "Recovery method must be verified first."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            RecoveryMethod.objects.filter(
+                user=request.user,
+                is_default=True,
+            ).update(is_default=False)
+
+            method.is_default = True
+            method.save(update_fields=["is_default", "updated_at"])
+
+            return Response(
+                {"message": "Default recovery method updated."},
+                status=status.HTTP_200_OK,
+            )
+
+        except RecoveryMethod.DoesNotExist:
+            return Response(
+                {"error": "Recovery method not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def delete(self, request, contact_id=None):
+        try:
+            method = RecoveryMethod.objects.get(id=contact_id, user=request.user)
+            method.is_active = False
+            method.is_default = False
+            method.save(update_fields=["is_active", "is_default", "updated_at"])
+
+            return Response(
+                {"message": "Recovery method removed."},
+                status=status.HTTP_200_OK,
+            )
+
+        except RecoveryMethod.DoesNotExist:
+            return Response(
+                {"error": "Recovery method not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
 
 class DebugVerificationView(APIView):
-    """
-    DEBUG ONLY: Get verification code for development/testing
-    This endpoint should be removed in production
-    """
     permission_classes = [permissions.AllowAny]
-    
+
     def get(self, request):
-        """Get verification code for a given email (dev only)"""
-        
-        # Only allow in development
-        from django.conf import settings
         if not settings.DEBUG:
             return Response(
-                {'error': 'This endpoint is only available in development'},
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "This endpoint is only available in development"},
+                status=status.HTTP_403_FORBIDDEN,
             )
-        
-        email = request.query_params.get('email')
+
+        email = normalize_email(request.query_params.get("email"))
         if not email:
             return Response(
-                {'error': 'Please provide email parameter: ?email=test@example.com'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Please provide email parameter: ?email=test@example.com"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         try:
-            verification = EmailVerification.objects.filter(email=email).order_by('-created_at').first()
-            
+            verification = (
+                EmailVerification.objects
+                .filter(email=email)
+                .order_by("-created_at")
+                .first()
+            )
+
             if not verification:
                 return Response(
-                    {'error': f'No verification code found for {email}'},
-                    status=status.HTTP_404_NOT_FOUND
+                    {"error": f"No verification code found for {email}"},
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
-            return Response({
-                'email': verification.email,
-                'code': verification.verification_code,
-                'is_verified': verification.is_verified,
-                'is_expired': verification.is_expired(),
-                'created_at': verification.created_at,
-                'expires_at': verification.expires_at,
-                'attempts': verification.attempts,
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"Error in debug view: {str(e)}")
+
             return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    "email": verification.email,
+                    "code": verification.verification_code,
+                    "is_verified": verification.is_verified,
+                    "is_expired": verification.is_expired(),
+                    "created_at": verification.created_at,
+                    "expires_at": verification.expires_at,
+                    "attempts": verification.attempts,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error("Error in debug view: %s", str(e))
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

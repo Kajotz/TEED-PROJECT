@@ -1,0 +1,59 @@
+from django.urls import path
+
+from core.views.sales import (
+    InventorySummaryView,
+    ProductDetailView,
+    ProductListCreateView,
+    ProductStockAdjustmentListView,
+    ProductUnitDetailView,
+    ProductUnitListCreateView,
+    StockAdjustmentCreateView,
+)
+
+urlpatterns = [
+    path(
+        "businesses/<uuid:business_id>/inventory/products/",
+        ProductListCreateView.as_view(),
+        name="inventory-product-list-create",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/products/summary/",
+        InventorySummaryView.as_view(),
+        name="inventory-summary",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/products/<uuid:product_id>/",
+        ProductDetailView.as_view(),
+        name="inventory-product-detail",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/units/",
+        ProductUnitListCreateView.as_view(),
+        name="inventory-unit-list-create",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/products/<uuid:product_id>/units/",
+        ProductUnitListCreateView.as_view(),
+        name="inventory-product-unit-list-create",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/units/<uuid:unit_id>/",
+        ProductUnitDetailView.as_view(),
+        name="inventory-unit-detail",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/adjustments/",
+        StockAdjustmentCreateView.as_view(),
+        name="inventory-stock-adjustment-create",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/adjustments/history/",
+        ProductStockAdjustmentListView.as_view(),
+        name="inventory-stock-adjustment-list",
+    ),
+    path(
+        "businesses/<uuid:business_id>/inventory/products/<uuid:product_id>/adjustments/history/",
+        ProductStockAdjustmentListView.as_view(),
+        name="inventory-product-stock-adjustment-list",
+    ),
+]

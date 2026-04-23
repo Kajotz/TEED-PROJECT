@@ -1,99 +1,115 @@
 """
-UserProfile Model - Stores personal information separate from Django User model
-Allows users to manage their profile, image, and personal details
+UserProfile Model - Stores personal profile information separate from the auth user model.
 """
 
-from django.db import models
-from django.contrib.auth.models import User
-from django.core.validators import URLValidator
 import uuid
+
+from django.conf import settings
+from django.db import models
 
 
 class UserProfile(models.Model):
     """
-    Extended user profile with personal information
-    Links to Django User model with OneToOneField
+    Extended user profile with personal information.
+    This model should only contain profile-related data, not auth/recovery state.
     """
-    
+
     COUNTRY_CHOICES = [
-        ('TZ', 'Tanzania'),
-        ('KE', 'Kenya'),
-        ('UG', 'Uganda'),
-        ('BI', 'Burundi'),
-        ('RW', 'Rwanda'),
-        ('CD', 'DRC'),
-        ('ZM', 'Zambia'),
+        ("TZ", "Tanzania"),
+        ("KE", "Kenya"),
+        ("UG", "Uganda"),
+        ("BI", "Burundi"),
+        ("RW", "Rwanda"),
+        ("CD", "DRC"),
+        ("ZM", "Zambia"),
     ]
-    
+
+    COUNTRY_VALUES = {code for code, _ in COUNTRY_CHOICES}
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    
-    # Personal Information
-    username_display = models.CharField(
-        max_length=100, 
-        unique=True,
-        help_text="Username for display and future authentication"
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
     )
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-    recovery_email = models.EmailField(
-        blank=True,
-        null=True,
-        unique=True,
-        help_text="Alternative email for account recovery if primary email is lost"
-    )
-    recovery_mobile = models.CharField(
+
+    # =========================
+    # Profile / completion data
+    # =========================
+    # Canonical international digits-only format, e.g. 255712345678
+    phone_number = models.CharField(
         max_length=20,
-        blank=True,
-        null=True,
         unique=True,
-        help_text="Alternative phone number for account recovery"
-    )
-    country = models.CharField(max_length=2, choices=COUNTRY_CHOICES, blank=True, null=True)
-    
-    # Profile Image
-    profile_image = models.ImageField(
-        upload_to='profile_images/',
         blank=True,
         null=True,
-        help_text="User profile picture"
+        db_index=True,
+        help_text="Primary verified phone number in canonical international format.",
     )
-    
-    # Email Verification
-    email_verified = models.BooleanField(
+
+    # Country derived from the verified phone number
+    phone_country_code = models.CharField(
+        max_length=2,
+        choices=COUNTRY_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Country code derived from the verified primary phone number.",
+    )
+
+    # User profile country. Can be prefilled from phone country and later edited if needed.
+    country = models.CharField(
+        max_length=2,
+        choices=COUNTRY_CHOICES,
+        blank=True,
+        null=True,
+    )
+
+    completion_passed = models.BooleanField(
         default=False,
-        help_text="Email address has been verified"
+        help_text="Indicates whether the user has completed required profile fields.",
     )
-    email_verified_at = models.DateTimeField(
-        null=True,
+
+    # =========================
+    # Profile image
+    # =========================
+    profile_image = models.ImageField(
+        upload_to="profile_images/",
         blank=True,
-        help_text="Timestamp when email was verified"
+        null=True,
+        help_text="User profile picture",
     )
-    
+
+    # =========================
     # Metadata
+    # =========================
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        db_table = 'user_profiles'
-        verbose_name = 'User Profile'
-        verbose_name_plural = 'User Profiles'
+        db_table = "user_profiles"
+        verbose_name = "User Profile"
+        verbose_name_plural = "User Profiles"
         indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['username_display']),
+            models.Index(fields=["user"]),
+            models.Index(fields=["phone_number"]),
+            models.Index(fields=["country"]),
+            models.Index(fields=["phone_country_code"]),
         ]
-    
+
     def __str__(self):
         return f"{self.user.username} - Profile"
-    
+
     def get_display_name(self):
-        """Get user's display name"""
+        """Get user's display name."""
         if self.user.first_name and self.user.last_name:
             return f"{self.user.first_name} {self.user.last_name}"
-        return self.username_display or self.user.username
-    
+        return self.user.username
+
     def get_profile_image_url(self):
-        """Get profile image URL or placeholder"""
+        """Get profile image URL or fallback avatar URL."""
         if self.profile_image:
             return self.profile_image.url
-        # Return placeholder based on first letter
-        return f"https://ui-avatars.com/api/?name={self.get_display_name()}&background=1F75FE&color=fff"
+        return (
+            f"https://ui-avatars.com/api/?name={self.get_display_name()}"
+            f"&background=1F75FE&color=fff"
+        )

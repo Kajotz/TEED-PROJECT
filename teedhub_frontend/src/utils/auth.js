@@ -1,39 +1,54 @@
-/**
- * Logout utility function to clear all auth data and redirect to home
- */
+const ACCESS_TOKEN_KEY = "access";
+const REFRESH_TOKEN_KEY = "refresh";
+
+export const getAccessToken = () => {
+  return sessionStorage.getItem(ACCESS_TOKEN_KEY);
+};
+
+export const getRefreshToken = () => {
+  return sessionStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+export const setAuthTokens = ({ access, refresh }) => {
+  if (access) {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, access);
+  }
+
+  if (refresh) {
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+  }
+};
+
+export const clearAuthTokens = () => {
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
 export const logout = async () => {
   try {
-    const token = localStorage.getItem('access_token');
-    
-    // Try to call logout endpoint if available
+    const token = getAccessToken();
+
     if (token) {
       try {
-        await fetch('http://localhost:8000/dj-rest-auth/logout/', {
-          method: 'POST',
+        await fetch("http://localhost:8000/dj-rest-auth/logout/", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
       } catch (err) {
-        console.error('Backend logout failed:', err);
-        // Continue with client-side logout even if backend fails
+        console.error("Backend logout failed:", err);
       }
     }
 
-    // Clear all auth-related localStorage items
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
-    
-    // Dispatch logout event so Layout can clear user state
-    window.dispatchEvent(new CustomEvent('logout'));
-    
-    // Redirect to home page
-    window.location.href = '/';
+    clearAuthTokens();
+
+    window.dispatchEvent(new CustomEvent("logout"));
+
+    window.location.href = "/";
   } catch (err) {
-    console.error('Logout error:', err);
-    // Still redirect to home even if error
-    window.location.href = '/';
+    console.error("Logout error:", err);
+    window.location.href = "/";
   }
 };
